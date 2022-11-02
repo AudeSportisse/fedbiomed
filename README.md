@@ -3,6 +3,7 @@
 version 3 implementation of the Fed-BioMed project
 
 ## Table of Contents
+
 [[_TOC_]]
 
 ## Introduction
@@ -11,11 +12,10 @@ Fed-BioMed is an open source project focused on empowering biomedical research u
 
 The project is currently based on Python, PyTorch and Scikit-learn, and enables developing and deploying federated learning analysis in real-world machine learning applications.
 
-The code is regularly released and available on the **master** branch of this repository. The documentation of the releases can be found at https://fedbiomed.gitlabpages.inria.fr
+The code is regularly released and available on the **master** branch of this repository. The documentation of the releases can be found at <https://fedbiomed.gitlabpages.inria.fr>
 
-Curious users may also be interested by the current developments, occuring in the **develop** branch (https://gitlab.inria.fr/fedbiomed/fedbiomed/-/tree/develop)
+Curious users may also be interested by the current developments, occuring in the **develop** branch (<https://gitlab.inria.fr/fedbiomed/fedbiomed/-/tree/develop>)
 According to our coding rules, the develop branch is usable, tests and tutorials will run, but the documentation may be not fully available or desynchronized with the code. We only provide support for the last release (currently v3.4) aka the master branch.
-
 
 ## Install and run in development environment
 
@@ -24,11 +24,10 @@ It runs also smoothly on macOSX (mostly tested on macOSX 12: Monterey).
 
 This README.md file provide a quick start/installation guide for Linux.
 
-Full installation instruction are also available at: https://fedbiomed.gitlabpages.inria.fr/v3.4/tutorials/installation/0-basic-software-installation/
-An installation guide is also provided for Windows10, which relies on WSL2: https://fedbiomed.gitlabpages.inria.fr/v3.4/user-guide/installation/windows-installation/
+Full installation instruction are also available at: <https://fedbiomed.gitlabpages.inria.fr/v3.4/tutorials/installation/0-basic-software-installation/>
+An installation guide is also provided for Windows10, which relies on WSL2: <https://fedbiomed.gitlabpages.inria.fr/v3.4/user-guide/installation/windows-installation/>
 
-
-### Prerequisites :
+### Prerequisites and set-up
 
 To ensure fedbiomed will work fine, you need to install before :
 
@@ -36,45 +35,44 @@ To ensure fedbiomed will work fine, you need to install before :
 * docker-compose
 * conda
 
-### clone repo
+#### Clone repository
 
 Clone the Fed-BioMed repository for running the software :
 
-```
+```text
 git clone https://gitlab.inria.fr/fedbiomed/fedbiomed.git
 ```
 
-Fed-BioMed developers clone of the repository :
+Or use the Fed-BioMed developers clone of the repository :
 
-```
+```text
 git clone git@gitlab.inria.fr:fedbiomed/fedbiomed.git
 ```
 
-### setup conda environments
+#### setup conda environments
 
-* to create or update the environments, you can use the **configure_conda** script:
+To create or update the environments, you can use the **configure_conda** script:
 
+```bash
+./scripts/configure_conda
 ```
-$ ./scripts/configure_conda
-```
 
-* this script will create/upadte the conda environments
+This script will create/upadte the conda environments. There is one specific environment for each component:
 
-* there is one specific environment for each component:
+* fedbiomed-network.yaml    : environment for HTTP upload/download server and MQTT daemon (network component)
+* fedbiomed-node.yaml       : environment for the node part
+* fedbiomed-researcher.yaml : environment for the researcher part
+* fedbiomed-gui.yaml        : environment for the data management gui on the node
 
-  * fedbiomed-network.yaml    : environment for HTTP upload/download server and MQTT daemon (network component)
-  * fedbiomed-node.yaml       : environment for the node part
-  * fedbiomed-researcher.yaml : environment for the researcher part
-  * fedbiomed-gui.yaml        : environment for the data management gui on the node
+Remarks:
 
-**Remark**:
+* This script can also be used to update only some of the environments
+* For some components, we provide different versions of yaml files depending of the operating system of your host
+* In case of (conda or python) errors, we advice to remove all environments and restart from fresh (use the **-c** flag of configure_conda)
 
-* this script can also be used to update only some of the environments
-* for some components, we provide different versions of yaml files depending of the operating system of your host
-* in case of (conda or python) errors, we advice to remove all environments and restart from fresh (use the **-c** flag of configure_conda)
-* general usage for this script is:
+General usage for this script is:
 
-```
+```text
 Usage: configure_conda [-n] [-c] [-t] [ENV ENV ..]
 
 Install/update conda environments for fedbiomed. If several ENV
@@ -90,99 +88,88 @@ ENV can be network, node, researcher, gui (or a combination of them)
                        (this only tests the researcher environment for now)
 ```
 
+### Run a minimal example
 
-### activate the environments
+#### Activate the environments
 
 In a terminal, you can configure environments to work interactively inside a specific repository, with the right conda environment and the right PYTHONPATH environment.
 
-**WARNING**: this script only work for **bash**, **ksh** and **zsh**. It is not compliant with c variant of shell (csh/tcsh/etcsh/...)
+To simulate locally a training process, you can open a minimum of three terminals : for your network, for a single node, and for your researcher. In each of these termional, run
+the follwing script, with ENV chosen from network, node, researcher.
 
-```
+```bash
 source ./scripts/fedbiomed_environment ENV
 ```
 
-where ENV chosen from:
+Remark:
 
-* network
-* node
-* researcher
+* This script only work for **bash**, **ksh** and **zsh**. It is not compliant with c variant of shell (csh/tcsh/etcsh/...)
 
-### run the software
+#### Run the network part
 
-#### run the network part
+Prerequesite: docker must be installed and running before running the network part
 
-* prerequesite: **docker** must be installed and running before running the network part !!!!
+In the network terminal, start the necessary docker containers (file repository and mqtt) by running:
 
-* in a new terminal:
-
-```
-$ ./scripts/fedbiomed_run network
+```bash
+./scripts/fedbiomed_run network
 ```
 
-* this will start the necessary docker container (file repository and mqtt)
+#### Run the node part
 
-#### run the node part
+Before creating a new node, download some data for your test run. From the node terminal, run :
 
-* in a new terminal:
-
-```
-$ ./scripts/fedbiomed_run node start
+```bash
+./scripts/fedbiomed_run node add
 ```
 
-* this will launch a new node
+In the node terminal still, you can now launch a new node using:
 
-* you may also upload new data on this node with:
-
-```
-$ ./scripts/fedbiomed_run node add
+```bash
+./scripts/fedbiomed_run node start
 ```
 
-* you may also specify a new config file for the node (usefull then running multiple test nodes on the same host)
+#### Run a researcher notebook or script
 
-```
-$ ./scripts/fedbiomed_run node config another_config.ini start
-```
+In your researcher terminal, launch a jupyter tab using :
 
-* if you want to change the default IP address used to join the fedbiomed network component (localhost), you can provide it at launch time:
-
-```
-$ ./scripts/fedbiomed_run node ip_address 192.168.0.100 start
-$ ./scripts/fedbiomed_run researcher ip_address 192.168
+```bash
+./scripts/fedbiomed_run researcher
 ```
 
-(adjust the 192.168.0.100 IP address to your configuration)
+This jupyter tab includes some test notebooks:
 
-If this option is given at the first launch or after a clean, it is saved in the configuration file and becomes the default for subsequent launches. If this option is given at a subsequent launch, it only affects this launch.
+* `101_getting-started.ipynb` : training a simplenet + federated average on MNIST data
+* `pytorch-local-training.ipynb` : comparing the simplenet + federated average on MNIST data with its local training equivalent
 
-#### run a researcher notebook
+* Alternatively, you can launch a script version of these notebooks, by running:
 
-* in a new terminal:
-
-```
-$ ./scripts/fedbiomed_run researcher
-```
-
-* this will launch a new jupyter notebook working in the **notebooks** repository. Some notebooks are available:
-
-  - `101_getting-started.ipynb` : training a simplenet + federated average on MNIST data
-  - `pytorch-local-training.ipynb` : comparing the simplenet + federated average on MNIST data with its local training equivalent
-
-
-#### run a researcher script
-
-* in a new terminal:
-
-```
-$ source ./scripts/fedbiomed_environment researcher
+```bash
+python ./notebooks/101_getting-started.py
 ```
 
-* then you can use any researcher script
+### How to adapt the minimal example
 
-```
-$ python ./notebooks/101_getting-started.py
+#### Change config file and IP address of node
+
+You may also specify a new config file for the node (usefull then running multiple test nodes on the same host)
+
+```bash
+./scripts/fedbiomed_run node config another_config.ini start
 ```
 
-### change IP address for network in the current bash
+If you want to change the default IP address used to join the fedbiomed network component (localhost), you can provide it at launch time.
+For instance, replacing 192.168.0.100 with your desired IP address:
+
+```bash
+./scripts/fedbiomed_run node ip_address 192.168.0.100 start
+./scripts/fedbiomed_run researcher ip_address 192.168
+```
+
+If this option is given at the first launch or after a clean, it is saved in the configuration file and becomes the default for subsequent launches.
+If this option is given at a subsequent launch, it only affects this launch.
+
+#### change IP address for network in the current bash
 
 By default, fedbiomed-{node,researcher} contact fedbiomed-network on `localhost`.
 To configure your current shell to use another IP address for joining fedbiomed-network (e.g. 192.168.0.100):
@@ -197,11 +184,9 @@ Then launch the components with usual commands while you are in the current shel
 
 Warning: this option does not modify the existing configuration file (.ini file).
 
-
 This currently doesn't support scenario where node and researcher do not use the same IP address to contact the network (eg: NAT for one component).
 
-
-### clean state (restore environments back to new)
+#### clean state (restore environments back to new)
 
 De-configure environments, remove all configuration files and caches
 
@@ -219,12 +204,12 @@ A full technical description is provided in **envs/vpn/README.md**
 The **./scripts/fedbiomed_vpn** script is provided to ease the deployment of
 a set of docker container(s) with VPN support. The provided containers are:
 
-- fedbiomed/vpn-vpnserver: WireGuard server
-- fedbiomed/vpn-restful: HTTP REST communication server
-- fedbiomed/vpn-mqtt: MQTT message broker server
-- fedbiomed/vpn-researcher: a researcher jupyter notebooks
-- fedbiomed/vpn-node: a node component
-- fedbiomed/vpn-gui: a GUI for managing node component data
+* fedbiomed/vpn-vpnserver: WireGuard server
+* fedbiomed/vpn-restful: HTTP REST communication server
+* fedbiomed/vpn-mqtt: MQTT message broker server
+* fedbiomed/vpn-researcher: a researcher jupyter notebooks
+* fedbiomed/vpn-node: a node component
+* fedbiomed/vpn-gui: a GUI for managing node component data
 
 All these containers are communicating through the Wireguard VPN server.
 
@@ -232,37 +217,37 @@ All these containers are communicating through the Wireguard VPN server.
 
 To setup **all** these components, you should:
 
-- clean all containers and files
+* clean all containers and files
 
 ```
 ./scripts/fedbiomed_vpn clean
 ```
 
-- build all the docker containers
+* build all the docker containers
 
 ```
 ./scripts/fedbiomed_vpn build
 ```
 
-- configure the wireguard encryption keys of all containers
+* configure the wireguard encryption keys of all containers
 
 ```
 ./scripts/fedbiomed_vpn configure
 ```
 
-- start the containers
+* start the containers
 
 ```
 ./scripts/fedbiomed_vpn start
 ```
 
-- check the containers status (presence and Wireguard configuration)
+* check the containers status (presence and Wireguard configuration)
 
 ```
 ./scripts/fedbiomed_vpn status
 ```
 
-- run a **fedbiomed_run** command inside the node component. Eg:
+* run a **fedbiomed_run** command inside the node component. Eg:
 
 ```
 ./scripts/fedbiomed_vpn node --add-mnist /data
@@ -270,12 +255,12 @@ To setup **all** these components, you should:
 ./scripts/fedbiomed_vpn node start
 ```
 
-- connect to the researcher jupyter at http://127.0.0.1:8888
-(Remark: the *researcher** docker automatically starts a jupyter notebook inside the container)
+* connect to the researcher jupyter at <http://127.0.0.1:8888>
+(Remark: the _researcher_* docker automatically starts a jupyter notebook inside the container)
 
-- manage data inside the node at http://127.0.0.1:8484
+* manage data inside the node at <http://127.0.0.1:8484>
 
-- stop the containers:
+* stop the containers:
 
 ```
 ./scripts/fedbiomed_vpn stop
@@ -293,6 +278,7 @@ For example, to build only the node, you can use:
 ```
 
 You can build/configure/stop/start/check more than one component at a time. Example:
+
 ```
 ./scripts/fedbiomed_vpn build gui node
 ```
@@ -301,21 +287,20 @@ This will stop and build the node container.
 
 The list of the container names is:
 
-- vpnserver
-- mqtt
-- restful
-- researcher
-- node
-- gui
+* vpnserver
+* mqtt
+* restful
+* researcher
+* node
+* gui
 
 **Remarks**:
-- the configuration files are keeped then rebuilding individual containers
-- to remove the old config files, you should do a **clean**
-- restarting only network component (vpnserver, restful, mqtt) then others are running
+
+* the configuration files are keeped then rebuilding individual containers
+* to remove the old config files, you should do a **clean**
+* restarting only network component (vpnserver, restful, mqtt) then others are running
 may lead to unpredictable behavior. In this case, it is adviced to restart from scratch
 (clean/build/configure/start)
-
-
 
 ## Misc developper tools to help debugging
 
@@ -327,29 +312,28 @@ usage:  lqueue directory
    or
         lqueue dir1 dir2 dir3 ...
 
-
 ### scripts/run\_integration\_test
 
 Run a full (integration) test by launching:
 
-- a researcher (running a python script or a notebook script)
-- several nodes, providing data
-- the network component.
+* a researcher (running a python script or a notebook script)
+* several nodes, providing data
+* the network component.
 
 Usefully for continuous integration tests and notebook debugging.
 Full documentation in tests/README.md file.
 
-### Testing Doc Strings 
+### Testing Doc Strings
 
 Fed-BioMed documentation has been configured to genereate API documentation by parsing doc strings
-that provided in classes and methods. Therefore, before creating a merge request please check 
+that provided in classes and methods. Therefore, before creating a merge request please check
 whether doc strings are valid for the fedbiomed documentation built. You can use following command
-to check WARNING and ERROR messages that comes from API docs. 
+to check WARNING and ERROR messages that comes from API docs.
 
-Following command will serve only API docs on the port `:8000`. The site will be different from 
-actual documentation page of Fed-BioMed. This is because the script has been configure as minimal as possible 
-to check only WARNING and ERROR messages. Please check major ERRORs and WARNING massages and to fix them 
-without paying action on visual of the site. 
+Following command will serve only API docs on the port `:8000`. The site will be different from
+actual documentation page of Fed-BioMed. This is because the script has been configure as minimal as possible
+to check only WARNING and ERROR messages. Please check major ERRORs and WARNING massages and to fix them
+without paying action on visual of the site.
 
 ```python
 ./tests/docstrings/check_docstrings
@@ -374,7 +358,9 @@ exp = Experiment(tags=tags,
                  tensorboard=True
                 )
 ```
+
 Or after initialization :
+
 ```
 exp.set_tensorboard(True)
 ```
@@ -418,7 +404,6 @@ Launch tensorboard with the following command :
 tensorboard --logdir "$tensorboard_dir"`
 ```
 
-
 ## Model Hashing and Enabling Model Approve
 
 Fed-BioMed offers optional training plan approval feature to approve the training plans requested by the researcher. This training plan approval process is done by hashing/checksum operation by the `ModelManager` of node instance. When the `TRAINING_PLAN_APPROVAL` mode is enabled, node should register/approve training plan files before performing the training. For testing and easy development, there are already presented default training plans by Fed-BioMed for the tutorials that we provide in the `notebooks` directory. However, node can also enable or disable the mode for allowing default training plans to perform training.
@@ -445,13 +430,11 @@ By default, when node is launched for the first time without additional security
 
 The default hashing algorithm is `SHA256` and it can also be changed to other hashing algorithms that are provided by Fed-BioMed. You can see the list of Hashing algorithms in the following section.
 
-
 #### Hashing Algorithms
 
 `ModelManager` provides different hashing algorithms, and the algorithm can be changed through the config file of the node. The name of the algorithms should be typed with capital letters. However, after changing hashing algorithm node should be restarted because it checks/updates hashing algorithms of the register/default training plans during the starting process.
 
 Provided hashing algorithms are `SHA256`, `SHA384`, `SHA512`, `SHA3_256`, `SHA3_384`, `SHA3_512`, `BLAKE2B` and `BLAKE2S`. These are the algorithms that has been guaranteed by `hashlib` library of Python.
-
 
 #### Starting nodes with different modes
 
@@ -480,7 +463,6 @@ For starting node with disabled training plan approval and default training plan
 
 Default training plans are located in the `envs/common/default_training_plans/` directory as `txt` files. Each time  the node starts with the `training_plan_approval = True` and `allow_default_training_plan = True` modes, hashing of the training plan files are checked to detect if the file is modified, the hashing algorithm has changed or is there any new training plan file added. If training plan files are modified `ModelManager` updates hashes for these training plans in the database. If the hashing algorithm of the training plan is different from the active hashing algorithm, hashes also get updated. This process only occurs when both `training-plan-approval` and `allow-default-training-plans` modes are activated. To add new default training plan for the examples or for testing, training plan files should be saved as `txt` and copied into the `envs/common/default_training_plans` directory. After the copy/save operation node should be restarted.
 
-
 #### Registering New TrainingPlans
 
 New training plans can be registered using `fedbiomed_run` scripts with `register-training-plan` option.
@@ -503,12 +485,11 @@ Output of this command will list registered training plans with their name and i
 
 ```
 Select the training plan to delete:
-1) MyModel	 Model ID training_plan_98a1e68d-7938-4889-bc46-357e4ce8b6b5
+1) MyModel  Model ID training_plan_98a1e68d-7938-4889-bc46-357e4ce8b6b5
 Select:
 ```
 
 Default training plans can not be removed using fedbiomed CLI. They should be removed from the `envs/common/default_training_plans` directory. After restarting the node, deleted training plan files will be also removed from the `TrainingPlans` table of the node DB.
-
 
 #### Updating Registered training plan
 
@@ -535,10 +516,10 @@ ${FEDBIOMED_DIR}/scripts/fedbiomed_run gui data-folder '<path-for-data-folder>' 
 
 Arguments:
 
-- ``data-folder``: Data folder represents the folder path where datasets have been stored. It can be absolute or relative path.
+* ``data-folder``: Data folder represents the folder path where datasets have been stored. It can be absolute or relative path.
 If it is relative path, Fed-BioMed base directory is going to be used as reference. **If `datafolder` is not provided. Script will look for
 `data` folder in the Fed-BioMed root directory and if it doesn't exist it will raise an error.**
-- ``config``: Config file represents the name of the configuration file which is going to be used for GUI. If it is not
+* ``config``: Config file represents the name of the configuration file which is going to be used for GUI. If it is not
 provided, default will be``config_node.ini``.
 
 It is also possible to start GUI on specific host and port, By default it is started `localhost` as host and `8484` as port.  To change
@@ -568,7 +549,6 @@ reinstall and rebuild, please add `--recreate` flag in the command same as below
 ${FEDBIOMED_DIR}/scripts/fedbiomed_run gui data-folder ../data --recreate start
 ```
 
-
 ### Launching Multiple Node GUI
 
 It is possible to start multiple Node GUIs for different nodes as long as the http ports are different. The
@@ -590,6 +570,7 @@ flag to the start command.
 ```shell
 ${FEDBIOMED_DIR}/scripts/fedbiomed_run gui data-folder ../data config config-n1.ini --debug start
 ```
+
 **Important:** Please do not change Flask port and host while starting it for development purposes. Because React (UI) will be calling
 ``localhost:8484/api`` endpoint in development mode.
 
