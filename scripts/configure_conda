@@ -175,11 +175,20 @@ done
 # some OS use different yaml files
 case $(uname) in
     Darwin )
-        ALTERNATE_YAML="macosx"
-        ;;
+        case $(uname -m) in
+            # mac M1 chips - full conda install
+            arm64 )
+                ALTERNATE_YAML="macosx-arm64"
+                ;;
+            # intel mac
+            * )
+                ALTERNATE_YAML="macosx"
+                ;;
+            esac
+            ;;
     * )
         # general files are used
-        ALTERNATE_YAML="NONE"
+        echo "NONE"
         ;;
 esac
 
