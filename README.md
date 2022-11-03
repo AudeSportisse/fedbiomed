@@ -144,7 +144,7 @@ This jupyter tab includes some test notebooks:
 
 * Alternatively, you can launch a script version of these notebooks, by running:
 
-```bash
+```shell
 python ./notebooks/101_getting-started.py
 ```
 
@@ -190,7 +190,7 @@ This currently doesn't support scenario where node and researcher do not use the
 
 De-configure environments, remove all configuration files and caches
 
-```
+```bash
 source ./scripts/fedbiomed_environment clean
 ```
 
@@ -219,37 +219,37 @@ To setup **all** these components, you should:
 
 * clean all containers and files
 
-```
+```bash
 ./scripts/fedbiomed_vpn clean
 ```
 
 * build all the docker containers
 
-```
+```bash
 ./scripts/fedbiomed_vpn build
 ```
 
 * configure the wireguard encryption keys of all containers
 
-```
+```bash
 ./scripts/fedbiomed_vpn configure
 ```
 
 * start the containers
 
-```
+```bash
 ./scripts/fedbiomed_vpn start
 ```
 
 * check the containers status (presence and Wireguard configuration)
 
-```
+```bash
 ./scripts/fedbiomed_vpn status
 ```
 
 * run a **fedbiomed_run** command inside the node component. Eg:
 
-```
+```bash
 ./scripts/fedbiomed_vpn node --add-mnist /data
 ./scripts/fedbiomed_vpn node list
 ./scripts/fedbiomed_vpn node start
@@ -262,7 +262,7 @@ To setup **all** these components, you should:
 
 * stop the containers:
 
-```
+```bash
 ./scripts/fedbiomed_vpn stop
 ```
 
@@ -273,13 +273,13 @@ by passing the name of the container(s) on the command line.
 
 For example, to build only the node, you can use:
 
-```
+```bash
 ./scripts/fedbiomed_vpn build node
 ```
 
 You can build/configure/stop/start/check more than one component at a time. Example:
 
-```
+```bash
 ./scripts/fedbiomed_vpn build gui node
 ```
 
@@ -345,7 +345,7 @@ Developer should do the last test on gitlabpages.
 
 To enable tensorboard during traning routine to see loss values, you need to set `tensorboard` parameter to `true` while initializing Experiment class.
 
-```
+```python
 exp = Experiment(tags=tags,
                  #nodes=None,
                  model_path=model_file,
@@ -361,13 +361,13 @@ exp = Experiment(tags=tags,
 
 Or after initialization :
 
-```
+```python
 exp.set_tensorboard(True)
 ```
 
 During training, the scalar values (loss) will be writen in the `runs` directory. You can either start tensorboard from jupyter notebook or terminal window.
 
-**Start tensorboard from notebook**
+### Start tensorboard from notebook
 
 First you should import `TENSORBOARD_RESULTS_DIR` from researcher environment in another cell
 
@@ -388,7 +388,7 @@ Run following command to start tensorboard
 tensorboard --logdir "$tensorboard_dir"
 ```
 
-**Start tensorboard from terminal command line**
+### Start tensorboard from terminal command line**
 
 Open new terminal and change directory to Fed-BioMed base directory (`${FEDBIOMED_DIR}`)
 
@@ -404,7 +404,7 @@ Launch tensorboard with the following command :
 tensorboard --logdir "$tensorboard_dir"`
 ```
 
-## Model Hashing and Enabling Model Approve
+### Model Hashing and Enabling Model Approve
 
 Fed-BioMed offers optional training plan approval feature to approve the training plans requested by the researcher. This training plan approval process is done by hashing/checksum operation by the `ModelManager` of node instance. When the `TRAINING_PLAN_APPROVAL` mode is enabled, node should register/approve training plan files before performing the training. For testing and easy development, there are already presented default training plans by Fed-BioMed for the tutorials that we provide in the `notebooks` directory. However, node can also enable or disable the mode for allowing default training plans to perform training.
 
@@ -412,7 +412,7 @@ Fed-BioMed offers optional training plan approval feature to approve the trainin
 
 Enabling training plan approval mode, allowing default Fed-BioMed training plans and the hashing algorithm that will be performed for the checksum operation can be configurred from the config file of the node. The following code snippet represents an example security section of config file with default values.
 
-```
+```text
 [default]
 # ....
 
@@ -446,12 +446,12 @@ To enable `training_plan_approval` mode and `allow_default_training_plans` node,
 
 This command will start the node with training plan approval activated mode even the config file has been set as `training_plan_aproval = False`. However it doesn't change the config file. If there is no config file named `config-n1.ini` it creates a config file for the node with enabled training plan approval mode.
 
-```
+```text
 [security]
 hashing_algorithm = SHA256
 allow_default_training_plans = True
 training_plan_approval = True
-
+```
 
 For starting node with disabled training plan approval and default training plans;
 
@@ -477,13 +477,13 @@ The CLI asks for the name of the training plan, description and the path where t
 
 Following command is used for deleting registered training plans.
 
-```
+```bash
 ./scripts/fedbiomed_run node config config-n1.ini delete-training-plan
 ```
 
 Output of this command will list registered training plans with their name and id. It will ask to select training plan file you would like to remove. For example, in the follwing example, typing `1`  will remove the `MyModel` from registered/approved list of training plans.
 
-```
+```text
 Select the training plan to delete:
 1) MyModel  Model ID training_plan_98a1e68d-7938-4889-bc46-357e4ce8b6b5
 Select:
@@ -496,7 +496,7 @@ Default training plans can not be removed using fedbiomed CLI. They should be re
 Following command is used for updating registered training plans. It updates chosen training plan with provided new training plan file. User also
 can provide same training plan file to update its content.
 
-```
+```bash
 ./scripts/fedbiomed_run node config config-n1.ini update-training-plan
 ```
 
