@@ -607,11 +607,25 @@ class UserKey(BaseKey):
             key: The value of the server's key \\(sk_0\\)
         """
         super().__init__(public_param, key)
-
+    def pre_encrypt(
+            self,
+            tau: int,
+            size_model: int
+    ) -> List[mpz]:
+        def _pre_encrypt(tau: int)-> mpz :
+            pre_ctxt = powmod(self._public_param.hashing_function(tau), self.key, self._public_param.n_square)
+            return pre_ctxt
+        
+        pre_chiper = []
+        for counter in range(size_model):
+            pre_chiper.append(_pre_encrypt((counter << self.public_param.bits // 2) | tau))
+        return pre_chiper
+        
     def encrypt(
             self,
             plaintext: List[mpz],
-            tau: int
+            r : List[mpz],
+            # tau: int
     ) -> List[mpz]:
         """Encrypts a plaintext  for time period tau
 
@@ -633,12 +647,13 @@ class UserKey(BaseKey):
         # TODO: find-out what is going wrong in numpy implementation
         # Use numpy vectors to increase speed of calculation
         plaintext = np.array(plaintext)
+        r = np.array(r)
         nude_ciphertext = (self._public_param.n_modulus * plaintext + 1) % self._public_param.n_square
-        taus = self._populate_tau(tau=tau, len_=len(plaintext))
+        # taus = self._populate_tau(tau=tau, len_=len(plaintext))
 
         # This process takes some time
-        vec_pow_mod = np.vectorize(powmod, otypes=[mpz])
-        r = vec_pow_mod(taus, self._key, self._public_param.n_square)
+        # vec_pow_mod = np.vectorize(powmod, otypes=[mpz])
+        # r = vec_pow_mod(taus, self._key, self._public_param.n_square)
         cipher = (nude_ciphertext * r) % self._public_param.n_square
 
         # Convert np array to list
@@ -723,12 +738,35 @@ class JoyeLibert:
             ptsize=VEParameters.KEY_SIZE // 2,
             valuesize=ceil(log2(VEParameters.TARGET_RANGE))
         )
-
-    def protect(self,
+    def pre_protect(self,
                 public_param: PublicParam,
                 user_key: UserKey,
                 tau: int,
+                orginal_size_model: int,
+                n_users: int,
+                ) -> List[mpz]:
+        """ 
+        TODO
+        """
+        if not isinstance(user_key, UserKey):
+            raise TypeError(f"Expected key for encryption type is UserKey. but got {type(user_key)}")
+
+        if user_key.public_param != public_param:
+            raise ValueError("Bad public parameter. The public parameter of user key does not match the "
+                             "one given for encryption")
+
+
+
+        size_model = ceil(orginal_size_model /self._vector_encoder._get_elements_size_and_compression_ratio(n_users)[1])
+        # return user_key.encrypt(x_u_tau, tau)
+        return user_key.pre_encrypt(tau=tau, size_model=size_model)
+    
+    def protect(self,
+                public_param: PublicParam,
+                user_key: UserKey,
+                # tau: int,
                 x_u_tau: List[int],
+                r_u_tau: List[int],
                 n_users: int,
                 ) -> List[mpz]:
         """ Protect user input with the user's secret key:
@@ -771,7 +809,8 @@ class JoyeLibert:
             add_ops=n_users
         )
 
-        return user_key.encrypt(x_u_tau, tau)
+        # return user_key.encrypt(x_u_tau, tau)
+        return user_key.encrypt(x_u_tau, r_u_tau)
 
     def aggregate(
             self,

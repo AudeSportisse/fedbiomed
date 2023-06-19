@@ -51,12 +51,74 @@ class SecaggCrypter:
         return PublicParam(n_modulus=biprime,
                            bits=key_size // 2,
                            hashing_function=fdh.H)
-
-    def encrypt(
+    def pre_encrypt(
             self,
             num_nodes: int,
             current_round: int,
             params: List[float],
+            key: int,
+            biprime: int,
+    ) -> List[int]:
+        """Pre Encrypts model parameters.
+
+        Args:
+            TODO
+        Returns:
+            List of pre encrypted parameters
+
+        Raises:
+            FedbiomedSecaggCrypterError: bad parameters
+            FedbiomedSecaggCrypterError: encryption issue
+        """
+
+        start = time.process_time()
+
+        if not isinstance(params, list):
+            raise FedbiomedSecaggCrypterError(
+                f"{ErrorNumbers.FB624.value}: Expected argument `params` type list but got {type(params)}"
+            )
+
+        if not all([isinstance(p, float) for p in params]):
+            raise FedbiomedSecaggCrypterError(
+                f"{ErrorNumbers.FB624.value}: The parameters to encrypt should list of floats. "
+                f"There are one or more than a value that is not type of float."
+            )
+
+        # Make use the key is instance of
+        if not isinstance(key, int):
+            raise FedbiomedSecaggCrypterError(
+                f"{ErrorNumbers.FB624.value}: The argument `key` must be integer"
+            )
+
+        
+        public_param = self._setup_public_param(biprime=biprime)
+
+        # Instantiates UserKey object
+        key = UserKey(public_param, key)
+
+        try:
+            # Encrypt parameters
+            pre_encrypted_params: List[mpz] = self._jls.pre_protect(
+                public_param=public_param,
+                user_key=key,
+                tau=current_round,
+                orginal_size_model=len(params),
+                n_users=num_nodes
+            )
+        except (TypeError, ValueError) as exp:
+            raise FedbiomedSecaggCrypterError(
+                f"{ErrorNumbers.FB624.value} Error during parameter encryption. {exp}") from exp
+
+        time_elapsed = time.process_time() - start
+        logger.debug(f"Encryption of the parameters took {time_elapsed} seconds.")
+
+        return [int(e_p) for e_p in pre_encrypted_params]
+                
+    def encrypt(
+            self,
+            num_nodes: int,
+            params: List[float],
+            pre_encrypted_params: List[int],
             key: int,
             biprime: int,
             clipping_range: Union[int, None] = None,
@@ -115,8 +177,9 @@ class SecaggCrypter:
             encrypted_params: List[mpz] = self._jls.protect(
                 public_param=public_param,
                 user_key=key,
-                tau=current_round,
+                # tau=current_round,
                 x_u_tau=params,
+                r_u_tau=pre_encrypted_params,
                 n_users=num_nodes
             )
         except (TypeError, ValueError) as exp:

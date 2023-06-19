@@ -403,11 +403,17 @@ class Round:
             model_weights = self.training_plan.after_training_params(flatten=self._use_secagg)
             if self._use_secagg:
                 logger.info("Encrypting model parameters. This process can take some time depending on model size.")
-
+                pre_encrypted =  self._secagg_crypter.pre_encrypt(
+                    num_nodes=len(self._servkey["parties"]) - 1,  # -1: don't count researcher
+                    current_round=self._round,
+                    params=model_weights,
+                    key=self._servkey["context"]["server_key"],
+                    biprime=self._biprime["context"]["biprime"])
+                logger.info("Pre-encryption is completed!")
                 encrypt = functools.partial(
                     self._secagg_crypter.encrypt,
                     num_nodes=len(self._servkey["parties"]) - 1,  # -1: don't count researcher
-                    current_round=self._round,
+                    pre_encrypted_params=pre_encrypted,
                     key=self._servkey["context"]["server_key"],
                     biprime=self._biprime["context"]["biprime"],
                     weight=sample_size,
