@@ -612,6 +612,9 @@ class UserKey(BaseKey):
             tau: int,
             size_model: int
     ) -> List[mpz]:
+        """
+        TODO
+        """
         def _pre_encrypt(tau: int)-> mpz :
             pre_ctxt = powmod(self._public_param.hashing_function(tau), self.key, self._public_param.n_square)
             return pre_ctxt
@@ -627,19 +630,8 @@ class UserKey(BaseKey):
             r : List[mpz],
             # tau: int
     ) -> List[mpz]:
-        """Encrypts a plaintext  for time period tau
-
-        Args:
-            plaintext: The plaintext/value to encrypt
-            tau:  The time period
-
-
-        Returns:
-            A ciphertext of the plaintext, encrypted by the user key of type `EncryptedNumber` or list of
-                encrypted numbers.
-
-        Raises:
-            TypeError: bad parameters type
+        """
+        TODO
         """
         if not isinstance(plaintext, list):
             raise TypeError(f"Expected plaintext type list but got {type(plaintext)}")
