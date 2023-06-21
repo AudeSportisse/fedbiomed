@@ -638,8 +638,8 @@ class UserKey(BaseKey):
 
         # TODO: find-out what is going wrong in numpy implementation
         # Use numpy vectors to increase speed of calculation
-        plaintext = np.array(plaintext)
-        r = np.array(r)
+        # plaintext = np.array(plaintext)
+        # r = np.array(r)
         # nude_ciphertext = (self._public_param.n_modulus * plaintext + 1) % self._public_param.n_square
         # do the same treating nude_ciphertext as a python list
         nude_ciphertext = [(self._public_param.n_modulus * pt + 1) % self._public_param.n_square for pt in plaintext]
