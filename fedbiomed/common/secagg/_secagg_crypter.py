@@ -110,7 +110,7 @@ class SecaggCrypter:
                 f"{ErrorNumbers.FB624.value} Error during parameter encryption. {exp}") from exp
 
         time_elapsed = time.process_time() - start
-        logger.debug(f"Encryption of the parameters took {time_elapsed} seconds.")
+        logger.debug(f"Pre-encryption of the parameters took {time_elapsed} seconds.")
 
         return [int(e_p) for e_p in pre_encrypted_params]
                 

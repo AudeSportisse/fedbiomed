@@ -410,7 +410,6 @@ class Round:
                     key=self._servkey["context"]["server_key"],
                     biprime=self._biprime["context"]["biprime"])
                 logger.info("Pre-encryption is completed!")
-                logger.info("len(pre_encrypted): {}".format(len(pre_encrypted)))
                 encrypt = functools.partial(
                     self._secagg_crypter.encrypt,
                     num_nodes=len(self._servkey["parties"]) - 1,  # -1: don't count researcher

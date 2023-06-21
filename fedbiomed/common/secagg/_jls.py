@@ -640,16 +640,21 @@ class UserKey(BaseKey):
         # Use numpy vectors to increase speed of calculation
         plaintext = np.array(plaintext)
         r = np.array(r)
-        nude_ciphertext = (self._public_param.n_modulus * plaintext + 1) % self._public_param.n_square
+        # nude_ciphertext = (self._public_param.n_modulus * plaintext + 1) % self._public_param.n_square
+        # do the same treating nude_ciphertext as a python list
+        nude_ciphertext = [(self._public_param.n_modulus * pt + 1) % self._public_param.n_square for pt in plaintext]
         # taus = self._populate_tau(tau=tau, len_=len(plaintext))
 
         # This process takes some time
         # vec_pow_mod = np.vectorize(powmod, otypes=[mpz])
         # r = vec_pow_mod(taus, self._key, self._public_param.n_square)
-        cipher = (nude_ciphertext * r) % self._public_param.n_square
+        # cipher = (nude_ciphertext * r) % self._public_param.n_square
+        # do the same treating cipher as a python list
+        cipher = [(nude_ciphertext[i] * r[i]) % self._public_param.n_square for i in range(len(nude_ciphertext))]
 
         # Convert np array to list
-        return cipher.tolist()
+        # return cipher.tolist()
+        return cipher
 
 
 class ServerKey(BaseKey):
