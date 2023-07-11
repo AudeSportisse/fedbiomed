@@ -51,7 +51,8 @@ class FlamingoCrypter:
         self.my_node_id = my_node_id
         # this is just an hardcoded example
         for node in nodes_ids:
-            self.pairwise_secrets[node] = int(0).to_bytes(32, byteorder='big')
+            if node != my_node_id:
+                self.pairwise_secrets[node] = int(0).to_bytes(32, byteorder='big')
 
 
     def encrypt(

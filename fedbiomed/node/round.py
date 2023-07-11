@@ -471,7 +471,7 @@ class Round:
                 #     clipping_range=secagg_arguments.get('secagg_clipping_range')
                 # )
 
-                self._flamingo_crypter.setup_pairwise_secrets(my_node_id=environ['NODE_ID'], nodes_ids=self._nodes_ids)
+                self._flamingo_crypter.setup_pairwise_secrets(my_node_id=str(environ['NODE_ID']), nodes_ids=self._nodes_ids)
                 encrypt = functools.partial(self._flamingo_crypter.encrypt(current_round=self._round,
                                                    weight=sample_size,
                                                    clipping_range=secagg_arguments.get('secagg_clipping_range')))
