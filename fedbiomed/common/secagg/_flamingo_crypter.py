@@ -31,6 +31,7 @@ class FlamingoCrypter:
     prf: Optional[PRF] = None
     def __init__(self) -> None:
         super().__init__()
+        self.my_node_id = None
         self.pairwise_secrets = {}
         self.pairwise_seeds = {}
         self.vector_dtype = 'uint32'
@@ -43,23 +44,23 @@ class FlamingoCrypter:
         FlamingoCrypter.prf = PRF(vectorsize=num_params, elementsize=16)
 
 
-    def setup_pairwise_secrets(self, nodes_idx: List[int]) -> None:
+    def setup_pairwise_secrets(self, my_node_id:int, nodes_ids: List[int]) -> None:
         """
         TODO: Add docstring
         """
+        self.my_node_id = my_node_id
         # this is just an hardcoded example
-        for node in nodes_idx:
+        for node in nodes_ids:
             self.pairwise_secrets[node] = int(0).to_bytes(32, byteorder='big')
 
 
     def encrypt(
             self,
             current_round: int,
-            my_node_id: int,
             params: List[float],
             clipping_range: Union[int, None] = None,
             weight: int = None,
-    ) -> np.ndarray:
+    ):
         """
         TODO: Add docstring
         """
@@ -76,14 +77,15 @@ class FlamingoCrypter:
             # expand seed to a random vector
             pairwise_vector = FlamingoCrypter.prf.eval_vector(seed=pairwise_seed)
             pairwise_vector = np.frombuffer(pairwise_vector, dtype=self.vector_dtype)
-            if node_id < my_node_id:
+            if node_id < self.my_node_id:
                 vec += pairwise_vector
             else:
                 vec -= pairwise_vector
 
         time_elapsed = time.process_time() - start
         logger.debug(f"Encryption of the parameters took {time_elapsed} seconds.")
-
+        print(vec[:10])
+        3/0
         encrypted_params = vec + params
         return encrypted_params
 

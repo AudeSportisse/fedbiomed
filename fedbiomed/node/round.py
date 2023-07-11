@@ -31,7 +31,7 @@ from fedbiomed.node.environ import environ
 from fedbiomed.node.history_monitor import HistoryMonitor
 from fedbiomed.node.secagg_manager import SKManager, BPrimeManager
 from fedbiomed.node.training_plan_security_manager import TrainingPlanSecurityManager
-from fedbiomed.common.secagg import SecaggCrypter
+from fedbiomed.common.secagg import SecaggCrypter, FlamingoCrypter
 
 
 class Round:
@@ -107,6 +107,7 @@ class Round:
         self.loader_arguments = None
         self.training_arguments = None
         self._secagg_crypter = SecaggCrypter()
+        self._flamingo_crypter = FlamingoCrypter()
         self._secagg_clipping_range = None
         self._round = round_number
         self._biprime = None
@@ -460,20 +461,28 @@ class Round:
             if self._use_secagg:
                 logger.info("Encrypting model parameters. This process can take some time depending on model size.")
 
-                encrypt = functools.partial(
-                    self._secagg_crypter.encrypt,
-                    num_nodes=len(self._servkey["parties"]) - 1,  # -1: don't count researcher
-                    current_round=self._round,
-                    key=self._servkey["context"]["server_key"],
-                    biprime=self._biprime["context"]["biprime"],
-                    weight=sample_size,
-                    clipping_range=secagg_arguments.get('secagg_clipping_range')
-                )
+                # encrypt = functools.partial(
+                #     self._secagg_crypter.encrypt,
+                #     num_nodes=len(self._servkey["parties"]) - 1,  # -1: don't count researcher
+                #     current_round=self._round,
+                #     key=self._servkey["context"]["server_key"],
+                #     biprime=self._biprime["context"]["biprime"],
+                #     weight=sample_size,
+                #     clipping_range=secagg_arguments.get('secagg_clipping_range')
+                # )
+                self._flamingo_crypter.setup_pairwise_secrets(my_node_id=environ['NODE_ID'], nodes_ids=self._nodes_ids)
+                encrypt = functools.partial(self._flamingo_crypter.encrypt(current_round=self._round,
+                                                   weight=sample_size,
+                                                   clipping_range=secagg_arguments.get('secagg_clipping_range')))
+
                 model_weights = encrypt(params=model_weights)
                 results["encrypted"] = True
                 results["encryption_factor"] = encrypt(params=[secagg_arguments["secagg_random"]])
                 logger.info("Encryption is completed!")
-
+            self._flamingo_crypter.encrypt(current_round=self._round,
+                                          weight=sample_size,
+                                           params=model_weights,
+                                          clipping_range=secagg_arguments.get('secagg_clipping_range'))
             results['researcher_id'] = self.researcher_id
             results['job_id'] = self.job_id
             results['model_weights'] = model_weights

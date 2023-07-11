@@ -4,11 +4,13 @@
 
 from ._jls import JoyeLibert, quantize, reverse_quantize
 from ._secagg_crypter import SecaggCrypter, EncryptedNumber
+from ._flamingo_crypter import FlamingoCrypter
 
 __all__ = [
     "JoyeLibert",
     "EncryptedNumber",
     "SecaggCrypter",
+    "FlamingoCrypter",
     "quantize",
     "reverse_quantize"
 ]
