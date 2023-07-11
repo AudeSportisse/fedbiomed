@@ -253,6 +253,8 @@ class Node:
         aggregator_args = msg.get_param('aggregator_args') or None
         round_number = msg.get_param('round') or 0
         aux_var_urls = msg.get_param('aux_var_urls') or None
+        nodes_ids = msg.get_param('nodes_ids')
+        
 
         assert training_plan_url is not None, 'URL for training plan on repository not found.'
         assert validators.url(
@@ -301,6 +303,7 @@ class Node:
                 round_number=round_number,
                 dlp_and_loading_block_metadata=dlp_and_loading_block_metadata,
                 aux_var_urls=aux_var_urls,
+                nodes_ids = nodes_ids
             )
 
         return round

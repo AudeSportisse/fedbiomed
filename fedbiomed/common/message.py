@@ -599,6 +599,7 @@ class TrainRequest(Message, RequiresProtocolVersion):
     round: int
     aggregator_args: dict
     aux_var_urls: (list, type(None))
+    nodes_ids: list
 
 
 @catch_dataclass_exception

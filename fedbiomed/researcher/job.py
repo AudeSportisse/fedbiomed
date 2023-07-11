@@ -220,7 +220,7 @@ class Job:
         return self._nodes
 
     @nodes.setter
-    def nodes(self, nodes: dict):
+    def nodes(self, nodes: List[str]):
         self._nodes = nodes
 
     @property
@@ -390,6 +390,7 @@ class Job:
             'command': 'train',
             'aggregator_args': {},
             'aux_var_urls': None,
+            'nodes_ids': self._nodes
         }
 
         msg = {**headers, **self._repository_args}

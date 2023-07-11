@@ -56,6 +56,7 @@ class Round:
         round_number: int = 0,
         dlp_and_loading_block_metadata: Optional[Tuple[dict, List[dict]]] = None,
         aux_var_urls: Optional[List[str]] = None,
+        nodes_ids: List[str] = []
     ) -> None:
         """Constructor of the class
 
@@ -111,6 +112,7 @@ class Round:
         self._biprime = None
         self._servkey = None
         self._optim_aux_var = {}  # type: Dict[str, Dict[str, Any]]
+        self._nodes_ids = nodes_ids
 
     def initialize_validate_training_arguments(self) -> None:
         """Validates and separates training argument for experiment round"""
