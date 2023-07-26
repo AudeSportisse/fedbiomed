@@ -457,7 +457,7 @@ class Round:
             sample_size = len(self.training_plan.training_data_loader.dataset)
 
             results["encrypted"] = False
-            model_weights = self.training_plan.after_training_params(flatten=self._use_secagg)
+            # model_weights = self.training_plan.after_training_params(flatten=self._use_secagg)
             if self._use_secagg:
                 logger.info("Encrypting model parameters. This process can take some time depending on model size.")
 
@@ -471,20 +471,16 @@ class Round:
                 #     clipping_range=secagg_arguments.get('secagg_clipping_range')
                 # )
 
-                self._flamingo_crypter.setup_pairwise_secrets(my_node_id=str(environ['NODE_ID']), nodes_ids=self._nodes_ids)
-                encrypt = functools.partial(self._flamingo_crypter.encrypt(current_round=self._round,
-                                                   weight=sample_size,
-                                                   clipping_range=secagg_arguments.get('secagg_clipping_range')))
-
-                model_weights = encrypt(params=model_weights)
-                results["encrypted"] = True
-                results["encryption_factor"] = encrypt(params=[secagg_arguments["secagg_random"]])
-                logger.info("Encryption is completed!")
+                # results["encrypted"] = True
+                # results["encryption_factor"] = encrypt(params=[secagg_arguments["secagg_random"]])
+                # logger.info("Encryption is completed!")
+            model_weights = self.training_plan.after_training_params(flatten=True)
             self._flamingo_crypter._init_prf(num_params=len(model_weights))
+            self._flamingo_crypter.setup_pairwise_secrets(my_node_id=environ['NODE_ID'], nodes_ids=self._nodes_ids)
             self._flamingo_crypter.encrypt(current_round=self._round,
                                           weight=sample_size,
-                                           params=model_weights,
-                                          clipping_range=secagg_arguments.get('secagg_clipping_range'))
+                                            params=model_weights,
+                                          clipping_range=3)
             results['researcher_id'] = self.researcher_id
             results['job_id'] = self.job_id
             results['model_weights'] = model_weights

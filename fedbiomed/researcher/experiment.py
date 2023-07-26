@@ -45,6 +45,7 @@ from fedbiomed.researcher.responses import Responses
 from fedbiomed.researcher.secagg import SecureAggregation
 from fedbiomed.researcher.strategies.strategy import Strategy
 from fedbiomed.researcher.strategies.default_strategy import DefaultStrategy
+from fedbiomed.common.secagg._flamingo_crypter import FlamingoCrypter
 
 TExperiment = TypeVar("TExperiment", bound='Experiment')  # only for typing
 
@@ -229,6 +230,7 @@ class Experiment:
         self._client_states_dict = {}
         self._server_state = None
         self._secagg = None
+        self._flamingo = FlamingoCrypter()
 
         # set self._secagg
         self.set_secagg(secagg)
@@ -1592,7 +1594,6 @@ class Experiment:
         # refining/normalizing model weights received from nodes
         model_params, weights, total_sample_size, encryption_factors = self._node_selection_strategy.refine(
             self._job.training_replies[self._round_current], self._round_current)
-
         self._aggregator.set_fds(self._fds)
 
         if self._secagg.active:
@@ -1609,14 +1610,18 @@ class Experiment:
 
         else:
             # aggregate models from nodes to a global model
-            aggregated_params = self._aggregator.aggregate(model_params,
-                                                           weights,
-                                                           global_model=self._global_model,
-                                                           training_plan=self._job.training_plan,
-                                                           training_replies=self._job.training_replies,
-                                                           node_ids=self._job.nodes,
-                                                           n_updates=self._training_args.get('num_updates'),
-                                                           n_round=self._round_current)
+            flatten_params = self._flamingo.aggregate(num_nodes=len(model_params), params=model_params,total_sample_size=total_sample_size, clipping_range=3)
+            aggregated_params: Dict[str, Union[torch.tensor, np.ndarray]] = (
+                self._job.training_plan._model.unflatten(flatten_params)
+            )
+            # aggregated_params = self._aggregator.aggregate(model_params,
+            #                                                weights,
+            #                                                global_model=self._global_model,
+            #                                                training_plan=self._job.training_plan,
+            #                                                training_replies=self._job.training_replies,
+            #                                                node_ids=self._job.nodes,
+            #                                                n_updates=self._training_args.get('num_updates'),
+            #                                                n_round=self._round_current)
 
         # Optionally refine the aggregated updates using an Optimizer.
         self._process_optim_aux_var()

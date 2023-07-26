@@ -4,7 +4,7 @@
 
 import time
 
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Dict
 
 import numpy as np
 from gmpy2 import mpz
@@ -44,15 +44,16 @@ class FlamingoCrypter:
         FlamingoCrypter.prf = PRF(vectorsize=num_params, elementsize=16)
 
 
-    def setup_pairwise_secrets(self, my_node_id:int, nodes_ids: List[int]) -> None:
+    def setup_pairwise_secrets(self, my_node_id:int, nodes_ids: List[str]) -> None:
         """
         TODO: Add docstring
         """
-        self.my_node_id = my_node_id
+        self.my_node_id = str(my_node_id)
         # this is just an hardcoded example
         for node in nodes_ids:
             if node != my_node_id:
-                self.pairwise_secrets[node] = int(0).to_bytes(32, byteorder='big')
+                #create 32 bytes secret of zeros
+                self.pairwise_secrets[node] = b'\x02' * 32
 
 
     def encrypt(
@@ -65,15 +66,14 @@ class FlamingoCrypter:
         """
         TODO: Add docstring
         """
-
         start = time.process_time()
         params = self._apply_weighing(params, weight)
-
         params = quantize(weights=params,
                           clipping_range=clipping_range)
         params = np.array(params, dtype=self.vector_dtype)
         vec = np.zeros(len(params), dtype=self.vector_dtype)
         for node_id, secret in self.pairwise_secrets.items():
+            # generate seed for pairwise encryption
             pairwise_seed = FlamingoCrypter.prf.eval_key(key=secret, round=current_round)
             # expand seed to a random vector
             pairwise_vector = FlamingoCrypter.prf.eval_vector(seed=pairwise_seed)
@@ -85,15 +85,13 @@ class FlamingoCrypter:
 
         time_elapsed = time.process_time() - start
         logger.debug(f"Encryption of the parameters took {time_elapsed} seconds.")
-        print(vec[:10])
-        3/0
         encrypted_params = vec + params
         return encrypted_params
 
     def aggregate(
             self,
             num_nodes: int,
-            params: List[np.ndarray],
+            params: Dict[str, np.ndarray],
             total_sample_size: int,
             clipping_range: Union[int, None] = None
     ) -> List[float]:
@@ -101,9 +99,10 @@ class FlamingoCrypter:
         TODO: Add docstring
         """
         start = time.process_time()
-
+        params = [p for _, p in params.items()]
         sum_of_weights = np.zeros(len(params[0]), dtype=self.vector_dtype)
         for param in params:
+            param = np.array(param, dtype=self.vector_dtype)
             sum_of_weights += param
         # TODO implement weighted averaging here or in `self._jls.aggregate`
         sum_of_weights = sum_of_weights.tolist()

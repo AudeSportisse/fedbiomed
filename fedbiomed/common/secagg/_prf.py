@@ -18,23 +18,15 @@ class PRF(object):
         self.bits_ptxt = elementsize
         self.num_bytes = ceil(elementsize / 8)
 
-    def eval_key(self, key, round):
-        if isinstance(key, mpz):
-            key = int(key)
-        if isinstance(key, int):
-            if key >= 2 ** PRF.security:
-                mask = 2 ** PRF.security - 1
-                key &= mask
-            key = key.to_bytes(PRF.security // 8, "big")
-        elif not isinstance(key, bytes):
-            raise ValueError("seed should be of type either int or bytes")
+    def eval_key(self, key: bytes, round: int):
         round_number_bytes = round.to_bytes(16, 'big')
         c = ChaCha20.new(key=key, nonce=PRF._nonce).encrypt(round_number_bytes)
-        c = str(int.from_bytes(c[0:4], 'big') & 0xFFFF)
+        # the output is a 16 bytes string, pad it to 32 bytes
+        # TODO fix it, I don't know if it is correct to pad with zeros
+        c = c + b'\x00' * 16
         return c
 
     def eval_vector(self, seed):
-
         c = ChaCha20.new(key=seed, nonce=PRF._nonce)
         data = b"secr" * self.vectorsize
         return c.encrypt(data)
