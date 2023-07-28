@@ -68,8 +68,12 @@ class FlamingoCrypter:
         """
         start = time.process_time()
         params = self._apply_weighing(params, weight)
+        logger.debug("pre-quantization")
+        logger.debug(params[:10])
         params = quantize(weights=params,
                           clipping_range=clipping_range)
+        logger.debug("post-quantization")
+        print(params[:10])
         params = np.array(params, dtype=self.vector_dtype)
         vec = np.zeros(len(params), dtype=self.vector_dtype)
         for node_id, secret in self.pairwise_secrets.items():
@@ -86,6 +90,7 @@ class FlamingoCrypter:
         time_elapsed = time.process_time() - start
         logger.debug(f"Encryption of the parameters took {time_elapsed} seconds.")
         encrypted_params = vec + params
+        print(f"encrypted_params:{encrypted_params[:10]}")
         return encrypted_params
 
     def aggregate(
@@ -103,17 +108,20 @@ class FlamingoCrypter:
         sum_of_weights = np.zeros(len(params[0]), dtype=self.vector_dtype)
         for param in params:
             param = np.array(param, dtype=self.vector_dtype)
+            print(param[:10])
             sum_of_weights += param
         # TODO implement weighted averaging here or in `self._jls.aggregate`
+        sum_of_weights = sum_of_weights.astype(np.int32)
         sum_of_weights = sum_of_weights.tolist()
         # Reverse quantize and division (averaging)
+
         aggregated_params: List[float] = reverse_quantize(
             self._apply_average(sum_of_weights, num_nodes, total_sample_size),
             clipping_range=clipping_range
         )
-
         time_elapsed = time.process_time() - start
         logger.debug(f"Aggregation is completed in {round(time_elapsed, ndigits=2)} seconds.")
+        logger.debug(f"aggregated_params:{aggregated_params[:10]}")
 
         return aggregated_params
 

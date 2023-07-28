@@ -102,7 +102,7 @@ class SecaggCrypter:
             )
 
         params = self._apply_weighing(params, weight)
-
+        
         params = quantize(weights=params,
                           clipping_range=clipping_range)
         public_param = self._setup_public_param(biprime=biprime)
