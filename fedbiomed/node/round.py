@@ -477,13 +477,13 @@ class Round:
             model_weights = self.training_plan.after_training_params(flatten=True)
             self._flamingo_crypter._init_prf(num_params=len(model_weights))
             self._flamingo_crypter.setup_pairwise_secrets(my_node_id=environ['NODE_ID'], nodes_ids=self._nodes_ids)
-            self._flamingo_crypter.encrypt(current_round=self._round,
+            encrypted_model_weights = self._flamingo_crypter.encrypt(current_round=self._round,
                                           weight=sample_size,
                                             params=model_weights,
                                           clipping_range=3)
             results['researcher_id'] = self.researcher_id
             results['job_id'] = self.job_id
-            results['model_weights'] = model_weights
+            results['model_weights'] = encrypted_model_weights
             results['node_id'] = environ['NODE_ID']
             results['optimizer_args'] = self.training_plan.optimizer_args()
 
