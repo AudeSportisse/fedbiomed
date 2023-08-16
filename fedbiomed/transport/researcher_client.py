@@ -70,7 +70,7 @@ async def task_reader(stub, node: str, callback: Callable = None):
             - Task 2 : Iterates through response to retrieve tasks  
 
         Task request iterator stops until a task received from the researcher server. This is 
-        managed using asyncio.Condition. Where the condition is "do not ask for new task until receive one"
+        managed using asyncio.event. Where the event is "do not ask for new task until receive one"
 
         Once a task is received reader fires the callback function
 
@@ -82,56 +82,78 @@ async def task_reader(stub, node: str, callback: Callable = None):
             GRPCTimeOut: Once the timeout is exceeded reader raises time out exception and 
                 closes the streaming.
         """  
-        condition = asyncio.Condition()
+        event = asyncio.Event()
 
-        async def request_tasks(condition):
+        async def request_tasks(event):
             """Send request stream to researcher server"""
             async def request_():
-                # Send starting request without relying on a condition
+                # Send starting request without relying on a event
                 logger.info("Sending first request after creating a new stream connection")
                 yield GetTaskRequest(node=node)
                 
                 timeout = time.time() + 60  # 5 minutes from now
                 # Cycle of requesting for tasks
                 while True:
-                    # Won't be executed until condition is notified by the
+                    # Won't be executed until event is notified by the
                     # task that listens for server responses
-                    async with condition:
-                        await condition.wait()
+                    await event.wait()
+                    event.clear()
 
                     if time.time() > timeout:
                         raise GRPCStreamingKeepAliveExceed() 
 
                     logger.info(f"Sending another request ---- within the stream")     
                     yield GetTaskRequest(node=NODE_ID)
+                    await asyncio.sleep(1)
 
-            # Call request iterator withing GetTask stub
-            state.task_iterator = stub.GetTask(
-                        request_(), timeout=50
-                    )
+            try:
+                #while True:
+                #    await asyncio.sleep(0.5)
+                #    print("REQUEST")
 
-        async def receive_tasks(condition):
+                # Call request iterator withing GetTask stub
+                state.task_iterator = stub.GetTask(
+                            request_(), timeout=10
+                        )
+            # exception never reached ?
+            except Exception as e:
+                print(f"Catch exception in request_tasks {e}")
+            # finally only reached on timeout, not on keyboard interrupt ?
+            finally:
+                print(f"Finished request_tasks")
+
+        async def receive_tasks(event):
             """Receives tasks form researcher server """
 
-            async for answer in state.task_iterator:
-                print("Received response")
-                print(answer)
+            try:
+                #while True:
+                #    await asyncio.sleep(0.5)
+                #    print("RECEIVE")
+                #    #for i in range(10000000):
+                #    #    pass
+                #    #print("RECEIVE")
+
+                async for answer in state.task_iterator:
+                    print("Received response")
+                    print(answer)
             
-                async with condition:
-                    condition.notify()
+                    event.set()
                 
-                #try:
-                #    task = tas_queue.get(block=False)
-                #except Exception:
-                #    continue
+                    #try:
+                    #    task = tas_queue.get(block=False)
+                    #except Exception:
+                    #    continue
+            finally:
+                print(f"Finished receive_tasks")
 
         # Shared state between two coroutines
         state = type('', (), {})()
 
         try:
             await asyncio.gather(
-                request_tasks(condition), 
-                receive_tasks(condition)
+                request_tasks(event), 
+                receive_tasks(event),
+                return_exceptions=True
                 )
         except grpc.aio.AioRpcError as exp:
             if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
@@ -140,8 +162,10 @@ async def task_reader(stub, node: str, callback: Callable = None):
             else:
                 print(exp)
                 raise Exception("Request streaming stopped ") from exp
+        except Exception as e:
+            print(f"Other task exception {e}")
         finally:
-            pass
+            print("After tasks gathering")
 
 
 
@@ -259,7 +283,7 @@ class ResearcherClient:
         #    raise
         except KeyboardInterrupt:
             #asyncio.get_running_loop().close()
-            print("Keyboard interrupt")
+            print("handling Keyboard interrupt")
 
         
     
