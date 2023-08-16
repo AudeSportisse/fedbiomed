@@ -28,7 +28,7 @@ logger.setLevel("DEBUG")
 NODE_ID = str(uuid.uuid4())
 
 
-tas_queue = queue.Queue()
+#tas_queue = queue.Queue()
 
 # test with an address not answering
 #DEFAULT_ADDRESS = "10.10.10.10:50051"
@@ -120,10 +120,10 @@ async def task_reader(stub, node: str, callback: Callable = None):
                 async with condition:
                     condition.notify()
                 
-                try:
-                    task = tas_queue.get(block=False)
-                except Exception:
-                    continue
+                #try:
+                #    task = tas_queue.get(block=False)
+                #except Exception:
+                #    continue
 
         # Shared state between two coroutines
         state = type('', (), {})()
@@ -244,7 +244,7 @@ class ResearcherClient:
 
                 except Exception as e:
                     # Retry request if server is down
-                    print(e)
+                    print(f"Unknown error while reading task {e}")
                     await asyncio.sleep(2)
             await asyncio.sleep(2)
 
