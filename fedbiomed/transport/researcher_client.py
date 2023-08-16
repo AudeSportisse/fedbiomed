@@ -7,7 +7,7 @@ import queue
 from typing import Callable
 
 import fedbiomed.proto.researcher_pb2_grpc as researcher_pb2_grpc
-from fedbiomed.proto.researcher_pb2 import RegisterRequest, GetTaskRequest
+from fedbiomed.proto.researcher_pb2 import RegisterRequest, GetTaskRequest, RegisterResponse
 from fedbiomed.common.logger import logger
 
 import uuid
@@ -30,6 +30,8 @@ NODE_ID = str(uuid.uuid4())
 
 tas_queue = queue.Queue()
 
+# test with an address not answering
+#DEFAULT_ADDRESS = "10.10.10.10:50051"
 DEFAULT_ADDRESS = "localhost:50051"
 STREAMING_MAX_KEEP_ALIVE_SECONDS = 60 
 
@@ -185,6 +187,11 @@ class ResearcherClient:
             await self.get_tasks()   
             
 
+    async def _register_command(self) -> RegisterResponse:
+        response = await self._stub.Register(
+            RegisterRequest(node=NODE_ID)
+        )
+        return response
 
     async def _register(self):
         """Register loop for researcher client
@@ -193,24 +200,28 @@ class ResearcherClient:
         while True: 
             print("Here")
             try:
-                response = await self._stub.Register(
-                    RegisterRequest(node=NODE_ID)
-                )
-                print(response)
+                # `asyncio.timeout()` is introduced in python 3.11
+                response = await asyncio.wait_for(self._register_command(), timeout=2)
+                print(f"Register response:\n{response}")
                 if response.status == True:
                     self._client_registered = True
                     logger.info("Client has been registered on researcher server ")
                     break
-                
+            except asyncio.TimeoutError as e:
+                # Test that one with a non-answering server address
+                logger.debug(f"gRPC server does not answer ... : {e}")
+                await asyncio.sleep(2)
+                continue
             except grpc.aio.AioRpcError as exp: 
                 
                 if exp.code() == grpc.StatusCode.UNAVAILABLE:
                     logger.debug("gRPC service is not available...")
-                    time.sleep(2)
+                    await asyncio.sleep(2)
                     continue
                 else:
                     logger.error("Something went wrong!")
                     break
+        await asyncio.sleep(5)
         return 
     
 
@@ -234,8 +245,8 @@ class ResearcherClient:
                 except Exception as e:
                     # Retry request if server is down
                     print(e)
-                    time.sleep(2)
-            time.sleep(2)
+                    await asyncio.sleep(2)
+            await asyncio.sleep(2)
 
     def start(self):
 
@@ -243,8 +254,12 @@ class ResearcherClient:
            asyncio.run(
                 self.connection()
             )
+        #except asyncio.CancelledError as e:
+        #    print(f"Canceled task: {e}")
+        #    raise
         except KeyboardInterrupt:
-            asyncio.get_running_loop().close()
+            #asyncio.get_running_loop().close()
+            print("Keyboard interrupt")
 
         
     
