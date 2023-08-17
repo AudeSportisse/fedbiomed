@@ -92,6 +92,13 @@ class Messaging:
             msg: mqtt on_message arg
         """
 
+        import threading
+        #import uuid
+        #uuid = uuid.uuid4()
+        uuid = ''
+        print(f"messaging.on_message: {uuid}: current {threading.current_thread()}")
+        print(f"messaging.on_message: {uuid}: all {threading.enumerate()}")
+
         if self._on_message_handler is not None:
             message = json.deserialize_msg(msg.payload)
             # check version
@@ -102,6 +109,12 @@ class Messaging:
             self._on_message_handler(msg=message, topic=msg.topic)
         else:
             logger.warning("no message handler defined")
+
+        #if self._messaging_type == ComponentType.NODE:
+        #    import time
+        #    for i in range(30):
+        #        logger.info(f"messaging.on_message: {uuid}: sleep {i} {threading.current_thread()}")
+        #        time.sleep(1)
 
     def on_connect(self,
                    client: mqtt.Client,

@@ -61,6 +61,10 @@ class Requests(metaclass=SingletonMeta):
 
         self._monitor_message_callback = None
 
+        import threading
+        print(f"Requests.init: current {threading.current_thread()}")
+        print(f"Requests.init: all {threading.enumerate()}")
+
     def get_messaging(self) -> Messaging:
         """Retrieves Messaging object
 
@@ -82,6 +86,10 @@ class Requests(metaclass=SingletonMeta):
             msg: de-serialized msg
             topic: topic to publish message (MQTT channel)
         """
+
+        import threading
+        print(f"requests.on_message: current {threading.current_thread()}")
+        print(f"requests.on_message: all {threading.enumerate()}")
 
         if topic == "general/logger":
             #
@@ -140,6 +148,11 @@ class Requests(metaclass=SingletonMeta):
             If `add_sequence` is True return the sequence number added to the message.
                 If `add_sequence` is False, return None
         """
+
+        import threading
+        print(f"send_message: current {threading.current_thread()}")
+        print(f"send_message: all {threading.enumerate()}")
+
         logger.debug(str(environ['RESEARCHER_ID']))
         sequence = None
         if add_sequence:

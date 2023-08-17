@@ -149,10 +149,19 @@ async def task_reader(stub, node: str, callback: Callable = None):
         # Shared state between two coroutines
         state = type('', (), {})()
 
+        async def tick():
+            i = 0
+            while True:
+                await asyncio.sleep(1)
+                print(f"TICK {i}")
+                i += 1
+
+        g = None
         try:
-            await asyncio.gather(
+            g = await asyncio.gather(
                 request_tasks(event), 
                 receive_tasks(event),
+                #tick(),
                 return_exceptions=True
                 )
         except grpc.aio.AioRpcError as exp:
@@ -165,9 +174,7 @@ async def task_reader(stub, node: str, callback: Callable = None):
         except Exception as e:
             print(f"Other task exception {e}")
         finally:
-            print("After tasks gathering")
-
-
+            print(f"After tasks gathering {g}")
 
 
 class ResearcherClient:

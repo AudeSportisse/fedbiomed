@@ -81,6 +81,10 @@ class Node:
             topic: Messaging topic name, decision (specially on researcher) may
                 be done regarding of the topic. Currently unused.
         """
+        import threading
+        print(f"on_message: current {threading.current_thread()}")
+        print(f"on_message: all {threading.enumerate()}")
+
         # TODO: describe all exceptions defined in this method
         msg_print = {key: value for key, value in msg.items() if key != 'aggregator_args'}
         logger.debug('Message received: ' + str(msg_print))
@@ -309,6 +313,9 @@ class Node:
         """Manages training tasks in the queue.
         """
 
+        import threading
+        print(f"task_manager: current {threading.current_thread()}")
+        print(f"task_manager: all {threading.enumerate()}")
         while True:
             item = self.tasks_queue.get()
             item_print = {key: value for key, value in item.items() if key != 'aggregator_args'}
