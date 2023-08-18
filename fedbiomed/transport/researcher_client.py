@@ -27,6 +27,8 @@ class GRPCTimeout(Exception):
     """gRPC timeout error"""
     pass 
 
+class ClientStop(Exception):
+    pass 
 
 class GRPCStreamingKeepAliveExceed(Exception):
     """"Task reader keep alive error"""
@@ -100,30 +102,39 @@ async def task_reader_unary(
     # def request_done(x):
     #     REQUEST_DONE.set()
 
-    while not SHUTDOWN_EVENT.is_set():
+    #while not SHUTDOWN_EVENT.is_set():
         
-        request_iterator = stub.GetTaskUnary(
-            TaskRequest(node=f"{node}")
-        )
-        #request_iterator.cancel()
-        # request_iterator.add_done_callback(request_done)
-        print("It didn't stop!")
-        # Prepare reply
-        reply = bytes()
-        async for answer in request_iterator:
+    try:
+        while True:
+            request_iterator = stub.GetTaskUnary(
+                TaskRequest(node=f"{node}")
+            )
+            #request_iterator.cancel()
+            # request_iterator.add_done_callback(request_done)
+            print("It didn't stop!")
+            # Prepare reply
+            reply = bytes()
+            async for answer in request_iterator:
 
-            try:
-                print("print")
-                reply += answer.bytes_
-                if answer.size != answer.iteration:
-                    continue
-                else:
-                    # Execute callback
-                    callback(Serializer.loads(reply))
-                    # Reset reply
-                    reply = bytes()
-            finally:
-                print("Last print")
+                try:
+                    print("print")
+                    reply += answer.bytes_
+                    if answer.size != answer.iteration:
+                        continue
+                    else:
+                        # Execute callback
+                        callback(Serializer.loads(reply))
+                        # Reset reply
+                        reply = bytes()
+                except Exception:
+                    print("gRPC generator: exception")
+                finally:
+                    print("Last print")
+    except asyncio.CancelledError:
+        print('task_reader_unary: exception')
+        raise asyncio.CancelledError
+    finally:
+        print('task_reader_unary: finally')
 
 
 async def task_reader(
@@ -196,9 +207,8 @@ async def task_reader(
 
         await asyncio.gather(
             request_tasks(event), 
-            receive_tasks(event)
+            receive_tasks(event),
             )
-
 
 
 
@@ -239,15 +249,24 @@ class ResearcherClient:
 
         # Starts loop to ask for
         await self.get_tasks()   
-            
+
 
     async def get_tasks(self):
 
-        while not SHUTDOWN_EVENT.is_set():
+        #while not SHUTDOWN_EVENT.is_set():
+        while True:
             logger.info("Sending new task request")
             try:
                 # await task_reader(stub= self._stub, node=NODE_ID, callback=self.on_task)
-                await task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x)
+                #await task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x)
+                task = asyncio.create_task(task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x))
+                #print(f"get_tasks: create {asyncio.current_task()} \n{asyncio.all_tasks()}")
+                while True:
+                    await asyncio.sleep(1)
+                #while not task.done():
+                #    print("task not done")
+                #    await asyncio.wait({task}, timeout=2)
+                print("task done")
 
             except GRPCStop:
                 # Break gRPC while loop
@@ -255,7 +274,7 @@ class ResearcherClient:
                 break
 
             except grpc.aio.AioRpcError as exp:
-                print(exp.code())
+                print(f"get_tasks: grpc.aio exception {exp.code()}")
                 if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                     logger.debug("Stream TIMEOUT Error")
                     await asyncio.sleep(2)
@@ -265,9 +284,17 @@ class ResearcherClient:
                     await asyncio.sleep(2)
                 else:
                     raise Exception("Request streaming stopped ") from exp
+            except Exception:
+                print("get_tasks: exception")
             finally:
-                pass
-            
+                print("get_tasks: finally")
+                #print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
+                if not task.done():
+                    task.cancel()
+                while not task.cancelled():
+                    await asyncio.sleep(0.1)
+                #print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
+
     
     async def send_log(self, log):
 
@@ -284,16 +311,24 @@ class ResearcherClient:
                     )
             except KeyboardInterrupt:
                 asyncio.get_running_loop().close()
+            except Exception:
+                print("Run: caught exception")
+            finally:
+                print("Run: finally")
 
         
-        t = threading.Thread(target=run, args=(self._stop_event,))
-        t.start()
+        self._t = threading.Thread(target=run, args=(self._stop_event,))
+        self._t.start()
 
     def stop(self, force: bool = False):
         """Stop gently running asyncio loop and its thread"""
 
-        SHUTDOWN_EVENT.set()
-        SHUTDOWN_FORCE_EVENT.set()
+        #SHUTDOWN_EVENT.set()
+        #SHUTDOWN_FORCE_EVENT.set()
+
+        import ctypes
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(self._t.ident),
+                                                   ctypes.py_object(ClientStop))
 
 if __name__ == '__main__':
     
