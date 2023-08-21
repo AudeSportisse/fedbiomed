@@ -91,6 +91,7 @@ async def task_reader_unary(
         stub, 
         node: str,
         callback: Callable = lambda x: x,
+        debug: bool = False
          
 ) -> TaskReturnCode:
     """Task reader as unary RPC
@@ -122,7 +123,7 @@ async def task_reader_unary(
             )
             #request_iterator.cancel()
             # request_iterator.add_done_callback(request_done)
-            print("task_reader_unary: launching generator")
+            if debug: print("task_reader_unary: launching generator")
             # Prepare reply
             reply = bytes()
             async for answer in request_iterator_future:
@@ -137,30 +138,33 @@ async def task_reader_unary(
                         callback(Serializer.loads(reply))
                         # Reset reply
                         reply = bytes()
+                # TODO: does this case occur ? not seen yet ...
                 except Exception:
-                    print("gRPC generator: exception")
+                    logger.error("gRPC generator: exception")
                 finally:
-                    print("Last print")
+                    if debug: print("gRPC generator: finally")
 
     except grpc.aio.AioRpcError as exp:
-        print(f"task_reader_unary: grpc.aio exception {exp.code()}")
+        if debug: print(f"task_reader_unary: grpc.aio exception {exp.code()}")
         if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
             trc = TaskReturnCode.TRC_ERROR_TIMEOUT
         elif exp.code() == grpc.StatusCode.UNAVAILABLE:
             trc = TaskReturnCode.TRC_ERROR_UNAVAIL
         else:
-            raise Exception("Request streaming stopped ") from exp
+            # TODO: does this case occur ? not seen yet.
+            #raise Exception("Request streaming stopped ") from exp
+            pass
 
     except asyncio.CancelledError as e:
         trc = TaskReturnCode.TRC_CANCELLED
-        print(f'task_reader_unary: exception cancel: {e}')
+        if debug: print(f'task_reader_unary: exception cancel: {e}')
         request_iterator_future.cancel()
         #raise asyncio.CancelledError
     except Exception as e:
-        print(f"task_reader_unary: exception generic: {e}")
+        if debug: print(f"task_reader_unary: exception generic: {e}")
         request_iterator_future.cancel()
     finally:
-        print('task_reader_unary: finally')
+        if debug: print('task_reader_unary: finally')
         return trc
 
 #async def task_reader(
@@ -252,6 +256,7 @@ class ResearcherClient:
             self,
             handler = None,
             certificate: str = None,
+            debug: bool = True
         ):
 
 
@@ -264,9 +269,31 @@ class ResearcherClient:
         self._stop_event = threading.Event()
         #self._client_thread = threading.Thread()
 
-    async def connection(self):
-        """Create long-lived connection with researcher server"""
-        
+        self._debug = debug
+
+    #async def connection(self):
+    #    """Create long-lived connection with researcher server"""
+    #    
+    #    self._feedback_channel = create_channel(certificate=None)
+    #    self._log_stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._feedback_channel)
+#
+    #    self._task_channel = create_channel(certificate=None)
+    #    self._stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._task_channel)
+#
+    #    logger.info("Waiting for researcher server...")
+#
+    #    # Starts loop to ask for
+    #    try:
+    #        await self.get_tasks()   
+    #    # TODO: never reached as we handle in `get_tasks`
+    #    #
+    #    #except Exception as e:
+    #    #    print("connection: exception")
+    #    finally:
+    #        print("connection: finally")
+
+    async def get_tasks(self, debug: bool):
+
         self._feedback_channel = create_channel(certificate=None)
         self._log_stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._feedback_channel)
 
@@ -275,29 +302,16 @@ class ResearcherClient:
 
         logger.info("Waiting for researcher server...")
 
-        # Starts loop to ask for
-        try:
-            await self.get_tasks()   
-        # TODO: never reached as we handle in `get_tasks`
-        #
-        #except Exception as e:
-        #    print("connection: exception")
-        finally:
-            print("connection: finally")
-
-    async def get_tasks(self):
-
-        #while not SHUTDOWN_EVENT.is_set():
         while True:
             logger.info("Sending new task request")
             try:
                 #task = asyncio.create_task(task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x))
-                task = asyncio.create_task(task_reader_unary(stub= self._stub, node=NODE_ID, callback= dummy_callback))
+                task = asyncio.create_task(task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug))
                 #print(f"get_tasks: create {asyncio.current_task()} \n{asyncio.all_tasks()}")
                 while not task.done():
-                    print("get_task: waiting for task to complete")
+                    if debug: print("get_task: waiting for task to complete")
                     await asyncio.wait({task}, timeout=2)
-                print("get_task: task completed")
+                if debug: print("get_task: task completed")
 
             #except GRPCStop:
             #    # Break gRPC while loop
@@ -320,22 +334,22 @@ class ResearcherClient:
             # except Exception:
             #    print("get_tasks: exception")
             finally:
-                print("get_tasks: finally")
+                if debug: print("get_tasks: finally")
                 #print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
                 if not task.done():
                     task.cancel()
                 while not task.done():
                     await asyncio.sleep(0.1)
-                    print(f"get_tasks: finally cancelling: cancelled {task.cancelled()}")
+                    if debug: print(f"get_tasks: finally cancelling: cancelled {task.cancelled()}")
                 
                 # we can now read the return code (need to catch `asyncio.CancelledError` if not waiting for `task.done()`)
                 res = task.result()
                 match res:
                     case TaskReturnCode.TRC_UNKNOWN:
-                        print("get_tasks: ERROR bad return code, exiting")
+                        logger.error("get_tasks: ERROR bad return code, exiting")
                         break
                     case TaskReturnCode.TRC_CANCELLED:
-                        print("get_tasks: cancelled by user, exiting")
+                        logger.info("get_tasks: cancelled by user, exiting")
                         break
                     case TaskReturnCode.TRC_ERROR_UNAVAIL:
                         logger.debug("Researcher server is not available, will retry connect in 2 seconds")
@@ -355,7 +369,8 @@ class ResearcherClient:
         def run(event):
             try: 
                 asyncio.run(
-                        self.connection(), debug=False
+                        #self.connection(), debug=False
+                        self.get_tasks(debug=self._debug), debug=False
                     )
             # TODO: never reached, suppress ?
             #
@@ -363,16 +378,16 @@ class ResearcherClient:
             #    #asyncio.get_running_loop().close()
             #    print("Cancelled by KeyboardInterrupt")
             except ClientStop:
-                print("Run: caught user stop exception")
+                if self._debug: print("Run: caught user stop exception")
             except Exception as e:
-                print(f"Run: caught exception: {e.__class__.__name__}")
+                if self._debug: print(f"Run: caught exception: {e.__class__.__name__}")
             finally:
-                print("Run: finally")
+                if self._debug: print("Run: finally")
 
         
         self._t = threading.Thread(target=run, args=(self._stop_event,))
         self._t.start()
-        print("start: completed")
+        if self._debug: print("start: completed")
 
     def stop(self, force: bool = False):
         """Stop gently running asyncio loop and its thread"""
@@ -384,16 +399,19 @@ class ResearcherClient:
         stopped_count = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(self._t.ident),
                                                                    ctypes.py_object(ClientStop))
         if stopped_count != 1:
-            print("stop: could not deliver exception to thread")
+            logger.error("stop: could not deliver exception to thread")
         self._t.join()
 
 if __name__ == '__main__':
     
-    rc= ResearcherClient()
+    rc= ResearcherClient(debug=False)
     rc.start()
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("Request cancel by keyboard interrupt")
-        rc.stop()
+        print("Node cancel by keyboard interrupt")
+        try:
+            rc.stop()
+        except KeyboardInterrupt:
+            print("Already canceling by keyboard interrupt")
