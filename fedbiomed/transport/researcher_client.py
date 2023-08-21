@@ -159,7 +159,8 @@ async def task_reader_unary(
         trc = TaskReturnCode.TRC_CANCELLED
         if debug: print(f'task_reader_unary: exception cancel: {e}')
         request_iterator_future.cancel()
-        #raise asyncio.CancelledError
+        # is it needed ?
+        raise asyncio.CancelledError
     except Exception as e:
         if debug: print(f"task_reader_unary: exception generic: {e}")
         request_iterator_future.cancel()
