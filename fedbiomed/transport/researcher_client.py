@@ -118,7 +118,7 @@ async def task_reader_unary(
             #request_iterator = stub.GetTaskUnary(
             #    TaskRequest(node=f"{node}")
             #)
-            request_iterator_future = stub.GetTaskUnary(
+            request_iterator = stub.GetTaskUnary(
                 TaskRequest(node=f"{node}")
             )
             #request_iterator.cancel()
@@ -126,7 +126,7 @@ async def task_reader_unary(
             if debug: print("task_reader_unary: launching generator")
             # Prepare reply
             reply = bytes()
-            async for answer in request_iterator_future:
+            async for answer in request_iterator:
 
                 try:
                     # print(f"print {threading.current_thread()} {asyncio.current_task()}")
@@ -158,12 +158,10 @@ async def task_reader_unary(
     except asyncio.CancelledError as e:
         trc = TaskReturnCode.TRC_CANCELLED
         if debug: print(f'task_reader_unary: exception cancel: {e}')
-        request_iterator_future.cancel()
         # probably not needed here
         #raise asyncio.CancelledError
     except Exception as e:
         if debug: print(f"task_reader_unary: exception generic: {e}")
-        request_iterator_future.cancel()
     finally:
         if debug: print('task_reader_unary: finally')
         return trc
@@ -350,9 +348,11 @@ class ResearcherClient:
                 match res:
                     case TaskReturnCode.TRC_UNKNOWN:
                         logger.error("get_tasks: ERROR bad return code, exiting")
+                        await self._task_channel.close()
                         break
                     case TaskReturnCode.TRC_CANCELLED:
                         logger.info("get_tasks: cancelled by user, exiting")
+                        await self._task_channel.close()
                         break
                     case TaskReturnCode.TRC_ERROR_UNAVAIL:
                         logger.debug("Researcher server is not available, will retry connect in 2 seconds")
@@ -405,12 +405,22 @@ class ResearcherClient:
             logger.error("stop: could not deliver exception to thread")
         self._t.join()
 
+    def is_alive(self) -> bool:
+        return self._t.is_alive()
+
 if __name__ == '__main__':
     
+    def handler(signum, frame):
+        print(f"Node cancel by signal {signal.Signals(signum).name}")
+        rc.stop()
+        sys.exit(1)
+
+    signal.signal(signal.SIGHUP, handler)
+
     rc= ResearcherClient(debug=True)
     rc.start()
     try:
-        while True:
+        while rc.is_alive():
             time.sleep(1)
     except KeyboardInterrupt:
         print("Node cancel by keyboard interrupt")
