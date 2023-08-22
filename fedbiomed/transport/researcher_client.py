@@ -119,7 +119,7 @@ async def task_reader_unary(
             #    TaskRequest(node=f"{node}")
             #)
             request_iterator = stub.GetTaskUnary(
-                TaskRequest(node=f"{node}")
+                TaskRequest(node=f"{node}"), timeout=15
             )
             #request_iterator.cancel()
             # request_iterator.add_done_callback(request_done)
@@ -348,10 +348,12 @@ class ResearcherClient:
                 match res:
                     case TaskReturnCode.TRC_UNKNOWN:
                         logger.error("get_tasks: ERROR bad return code, exiting")
+                        # we would expect the `close()` to end the gRPC thread - this is not the case - reason ?
                         await self._task_channel.close()
                         break
                     case TaskReturnCode.TRC_CANCELLED:
                         logger.info("get_tasks: cancelled by user, exiting")
+                        # we would expect the `close()` to end the gRPC thread - this is not the case - reason ?
                         await self._task_channel.close()
                         break
                     case TaskReturnCode.TRC_ERROR_UNAVAIL:
@@ -359,7 +361,7 @@ class ResearcherClient:
                         await asyncio.sleep(2)
                     case TaskReturnCode.TRC_ERROR_TIMEOUT:
                         logger.debug("Stream TIMEOUT Error")
-                        await asyncio.sleep(2)
+                        #await asyncio.sleep(2)
 
     async def send_log(self, log):
 
