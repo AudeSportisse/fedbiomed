@@ -159,8 +159,8 @@ async def task_reader_unary(
         trc = TaskReturnCode.TRC_CANCELLED
         if debug: print(f'task_reader_unary: exception cancel: {e}')
         request_iterator_future.cancel()
-        # is it needed ?
-        raise asyncio.CancelledError
+        # probably not needed here
+        #raise asyncio.CancelledError
     except Exception as e:
         if debug: print(f"task_reader_unary: exception generic: {e}")
         request_iterator_future.cancel()
@@ -295,8 +295,8 @@ class ResearcherClient:
 
     async def get_tasks(self, debug: bool):
 
-        self._feedback_channel = create_channel(certificate=None)
-        self._log_stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._feedback_channel)
+        #self._feedback_channel = create_channel(certificate=None)
+        #self._log_stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._feedback_channel)
 
         self._task_channel = create_channel(certificate=None)
         self._stub = researcher_pb2_grpc.ResearcherServiceStub(channel=self._task_channel)
@@ -311,6 +311,7 @@ class ResearcherClient:
                 #print(f"get_tasks: create {asyncio.current_task()} \n{asyncio.all_tasks()}")
                 while not task.done():
                     if debug: print("get_task: waiting for task to complete")
+                    # note: when receiving a ClientStop, no exception is raised here but execute the `finally`
                     await asyncio.wait({task}, timeout=2)
                 if debug: print("get_task: task completed")
 
@@ -338,6 +339,7 @@ class ResearcherClient:
                 if debug: print("get_tasks: finally")
                 #print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
                 if not task.done():
+                    if debug: print("get_tasks: cancel")
                     task.cancel()
                 while not task.done():
                     await asyncio.sleep(0.1)
@@ -373,13 +375,12 @@ class ResearcherClient:
                         #self.connection(), debug=False
                         self.get_tasks(debug=self._debug), debug=False
                     )
-            # TODO: never reached, suppress ?
-            #
-            #except KeyboardInterrupt:
-            #    #asyncio.get_running_loop().close()
-            #    print("Cancelled by KeyboardInterrupt")
+
+            # note: needed to catch this exception
             except ClientStop:
                 if self._debug: print("Run: caught user stop exception")
+            # TODO: never reached, suppress ?
+            #
             except Exception as e:
                 if self._debug: print(f"Run: caught exception: {e.__class__.__name__}")
             finally:
@@ -389,6 +390,7 @@ class ResearcherClient:
         self._t = threading.Thread(target=run, args=(self._stop_event,))
         self._t.start()
         if self._debug: print("start: completed")
+
 
     def stop(self, force: bool = False):
         """Stop gently running asyncio loop and its thread"""
