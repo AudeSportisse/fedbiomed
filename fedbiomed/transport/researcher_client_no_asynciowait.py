@@ -160,7 +160,7 @@ async def task_reader_unary(
         if debug: print(f'task_reader_unary: exception cancel: {e}')
         request_iterator_future.cancel()
         # probably not needed here
-        #raise asyncio.CancelledError
+        raise asyncio.CancelledError
     except Exception as e:
         if debug: print(f"task_reader_unary: exception generic: {e}")
         request_iterator_future.cancel()
@@ -306,13 +306,14 @@ class ResearcherClient:
         while True:
             logger.info("Sending new task request")
             try:
-                #task = asyncio.create_task(task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x))
-                task = asyncio.create_task(task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug))
-                #print(f"get_tasks: create {asyncio.current_task()} \n{asyncio.all_tasks()}")
-                while not task.done():
-                    if debug: print("get_task: waiting for task to complete")
-                    # note: when receiving a ClientStop, no exception is raised here but execute the `finally`
-                    await asyncio.wait({task}, timeout=2)
+                ##task = asyncio.create_task(task_reader_unary(stub= self._stub, node=NODE_ID, callback= lambda x: x))
+                #task = asyncio.create_task(task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug))
+                ##print(f"get_tasks: create {asyncio.current_task()} \n{asyncio.all_tasks()}")
+                #while not task.done():
+                #    if debug: print("get_task: waiting for task to complete")
+                #    # note: when receiving a ClientStop, no exception is raised here but execute the `finally`
+                #    await asyncio.wait({task}, timeout=2)
+                res = await task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug)
                 if debug: print("get_task: task completed")
 
             #except GRPCStop:
@@ -333,20 +334,20 @@ class ResearcherClient:
 
             # INFO: seems to be never reached - `wait` always complete even if task is interrupted
             #
-            # except Exception:
-            #    print("get_tasks: exception")
+            except Exception:
+                print("get_tasks: exception")
             finally:
                 if debug: print("get_tasks: finally")
-                #print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
-                if not task.done():
-                    if debug: print("get_tasks: cancel")
-                    task.cancel()
-                while not task.done():
-                    await asyncio.sleep(0.1)
-                    if debug: print(f"get_tasks: finally cancelling: cancelled {task.cancelled()}")
+                ##print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
+                #if not task.done():
+                #    if debug: print("get_tasks: cancel")
+                #    task.cancel()
+                #while not task.done():
+                #    await asyncio.sleep(0.1)
+                #    if debug: print(f"get_tasks: finally cancelling: cancelled {task.cancelled()}")
                 
                 # we can now read the return code (need to catch `asyncio.CancelledError` if not waiting for `task.done()`)
-                res = task.result()
+                #res = task.result()
                 match res:
                     case TaskReturnCode.TRC_UNKNOWN:
                         logger.error("get_tasks: ERROR bad return code, exiting")
@@ -407,7 +408,7 @@ class ResearcherClient:
 
 if __name__ == '__main__':
     
-    rc= ResearcherClient(debug=False)
+    rc= ResearcherClient(debug=True)
     rc.start()
     try:
         while True:
