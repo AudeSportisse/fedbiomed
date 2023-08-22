@@ -407,7 +407,7 @@ class ResearcherClient:
 
 if __name__ == '__main__':
     
-    rc= ResearcherClient(debug=False)
+    rc= ResearcherClient(debug=True)
     rc.start()
     try:
         while True:
@@ -417,4 +417,4 @@ if __name__ == '__main__':
         try:
             rc.stop()
         except KeyboardInterrupt:
-            print("Already canceling by keyboard interrupt")
+            print("Immediate keyboard interrupt, dont wait to clean")

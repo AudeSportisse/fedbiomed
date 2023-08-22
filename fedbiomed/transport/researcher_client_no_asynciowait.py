@@ -113,7 +113,7 @@ async def task_reader_unary(
 
 
     try:
-        trc = TaskReturnCode.TRC_UNKNOWN
+        #trc = TaskReturnCode.TRC_UNKNOWN
         while True:
             #request_iterator = stub.GetTaskUnary(
             #    TaskRequest(node=f"{node}")
@@ -144,29 +144,29 @@ async def task_reader_unary(
                 finally:
                     if debug: print("gRPC generator: finally")
 
-    except grpc.aio.AioRpcError as exp:
-        if debug: print(f"task_reader_unary: grpc.aio exception {exp.code()}")
-        if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-            trc = TaskReturnCode.TRC_ERROR_TIMEOUT
-        elif exp.code() == grpc.StatusCode.UNAVAILABLE:
-            trc = TaskReturnCode.TRC_ERROR_UNAVAIL
-        else:
-            # TODO: does this case occur ? not seen yet.
-            #raise Exception("Request streaming stopped ") from exp
-            pass
-
-    except asyncio.CancelledError as e:
-        trc = TaskReturnCode.TRC_CANCELLED
-        if debug: print(f'task_reader_unary: exception cancel: {e}')
-        request_iterator_future.cancel()
-        # probably not needed here
-        raise asyncio.CancelledError
-    except Exception as e:
-        if debug: print(f"task_reader_unary: exception generic: {e}")
-        request_iterator_future.cancel()
+    #except grpc.aio.AioRpcError as exp:
+    #    if debug: print(f"task_reader_unary: grpc.aio exception {exp.code()}")
+    #    if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+    #        trc = TaskReturnCode.TRC_ERROR_TIMEOUT
+    #    elif exp.code() == grpc.StatusCode.UNAVAILABLE:
+    #        trc = TaskReturnCode.TRC_ERROR_UNAVAIL
+    #    else:
+    #        # TODO: does this case occur ? not seen yet.
+    #        #raise Exception("Request streaming stopped ") from exp
+    #        pass
+#
+    #except asyncio.CancelledError as e:
+    #    trc = TaskReturnCode.TRC_CANCELLED
+    #    if debug: print(f'task_reader_unary: exception cancel: {e}')
+    #    request_iterator_future.cancel()
+    #    # probably not needed here
+    #    raise asyncio.CancelledError
+    #except Exception as e:
+    #    if debug: print(f"task_reader_unary: exception generic: {e}")
+    #    request_iterator_future.cancel()
     finally:
         if debug: print('task_reader_unary: finally')
-        return trc
+        #return trc
 
 #async def task_reader(
 #        stub, 
@@ -313,7 +313,9 @@ class ResearcherClient:
                 #    if debug: print("get_task: waiting for task to complete")
                 #    # note: when receiving a ClientStop, no exception is raised here but execute the `finally`
                 #    await asyncio.wait({task}, timeout=2)
-                res = await task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug)
+                #res = await task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug)
+                res = TaskReturnCode.TRC_UNKNOWN
+                await task_reader_unary(stub=self._stub, node=NODE_ID, callback=dummy_callback, debug=debug)
                 if debug: print("get_task: task completed")
 
             #except GRPCStop:
@@ -334,8 +336,29 @@ class ResearcherClient:
 
             # INFO: seems to be never reached - `wait` always complete even if task is interrupted
             #
-            except Exception:
-                print("get_tasks: exception")
+
+            except grpc.aio.AioRpcError as exp:
+                if debug:
+                    print(f"get_tasks: grpc.aio exception {exp.code()}")
+                if exp.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                    res = TaskReturnCode.TRC_ERROR_TIMEOUT
+                elif exp.code() == grpc.StatusCode.UNAVAILABLE:
+                    res = TaskReturnCode.TRC_ERROR_UNAVAIL
+                else:
+                    # TODO: does this case occur ? not seen yet.
+                    #raise Exception("Request streaming stopped ") from exp
+                    pass
+
+            except asyncio.CancelledError as e:
+                res = TaskReturnCode.TRC_CANCELLED
+                if debug:
+                    print(f'get_tasks: exception cancel: {e}')
+                # probably not needed here
+                #raise asyncio.CancelledError
+            except Exception as e:
+                if debug:
+                    print(f"get_tasks: exception generic: {e}")
+
             finally:
                 if debug: print("get_tasks: finally")
                 ##print(f"get_tasks: finally {asyncio.current_task()} \n{asyncio.all_tasks()}")
@@ -418,4 +441,4 @@ if __name__ == '__main__':
         try:
             rc.stop()
         except KeyboardInterrupt:
-            print("Already canceling by keyboard interrupt")
+            print("Immediate keyboard interrupt, dont wait to clean")
