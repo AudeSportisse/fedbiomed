@@ -71,6 +71,46 @@ def weighted_sum(model_params: List[Dict[str, Union[torch.Tensor, np.ndarray]]],
 
     return avg_params
 
+def federated_standardization(model_params: List[Dict[str, torch.Tensor]],
+                        weights: List[float]) -> Dict[str, torch.Tensor]:
+    """Defines strategy for evaluating the global mean and standard deviation.
+
+    Args:
+        model_params: list that contains nodes' model parameters; each model is stored as an OrderedDict (maps
+            model layer name to the model weights). Expected model parameters are:
+            - mean, a torch.Tensor containing the local mean (expected size = num features)
+            - std, a torch.Tensor containing the local std (expected size = num features)
+            - size, a torch.Tensor containing the number of locally observed samples per feature (expected size = num features)
+
+        weights: not needed here
+
+    Returns:
+        A dictionary containing federated mean, federated standard deviation and total number of samples.
+    """
+    assert len(model_params) > 0, 'An empty list of models was passed.'
+    assert len(weights) == len(model_params), 'List with number of observations must have ' \
+                                              'the same number of elements that list of models.'
+
+    # Recover lists of local means and local stds
+    mean_cl = [mod_par['mean'] for mod_par in model_params]
+    std_cl = [mod_par['std'] for mod_par in model_params]
+    N_cl = [mod_par['size'] for mod_par in model_params]
+
+    #Evaluate global mean and global std
+    cl = len(N_cl)
+    N_tot = sum([N_cl[c] for c in range(cl)])
+    fed_mean = sum([N_cl[i]*mean_cl[i]/N_tot for i in range(cl)])
+    fed_std = torch.sqrt(sum([((N_cl[i]-1)*(std_cl[i]**2)+N_cl[i]*(mean_cl[i]**2))/(N_tot-cl) for i in range(cl)])-(N_tot/(N_tot-cl))*(fed_mean**2))
+
+    # with np
+    #fed_mean = sum([N_cl[i]*np.array(mean_cl[i])/N_tot for i in range(cl)])
+    #fed_std = np.sqrt(sum([((N_cl[i]-1)*np.array(std_cl[i])**2+\
+    #                            N_cl[i]*np.array(mean_cl[i])**2)/(N_tot-cl) for i in range(cl)])\
+    #                        -(N_tot/(N_tot-cl))*fed_mean**2)
+
+    fed_standardization_params = {'mean': fed_mean, 'std': fed_std, 'size': N_tot}
+
+    return fed_standardization_params
 
 def init_correction_states(model_params: Dict, node_ids: Dict) -> Dict:
     init_params = {key: initialize(tensor)[1] for key, tensor in model_params.items()}

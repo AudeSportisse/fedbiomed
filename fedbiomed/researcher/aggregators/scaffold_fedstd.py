@@ -18,12 +18,12 @@ from fedbiomed.common.serializer import Serializer
 from fedbiomed.common.training_plans import BaseTrainingPlan
 
 from fedbiomed.researcher.aggregators.aggregator import Aggregator
-from fedbiomed.researcher.aggregators.functional import initialize
+from fedbiomed.researcher.aggregators.functional import initialize, federated_standardization
 from fedbiomed.researcher.datasets import FederatedDataSet
 from fedbiomed.researcher.responses import Responses
 
 
-class Scaffold(Aggregator):
+class Scaffold_FedStd(Aggregator):
     """
     Defines the Scaffold strategy
 
@@ -98,7 +98,7 @@ class Scaffold(Aggregator):
 
         """
         super().__init__()
-        self.aggregator_name: str = "Scaffold"
+        self.aggregator_name: str = "Scaffold_FedStd"
         if server_lr == 0.:
             raise FedbiomedAggregatorError("SCAFFOLD Error: Server learning rate cannot be equal to 0")
         self.server_lr: float = server_lr
@@ -176,6 +176,19 @@ class Scaffold(Aggregator):
             raise FedbiomedAggregatorError(
                 "Received updates from nodes that are unknown to this aggregator."
             )
+        
+        # Extract parameters needed for federated standardization
+        mean_std_processed = []
+        for node_id, params in model_params.items():
+            keys_fedstd = ['mean','std','size']
+            mean_std_subdict = {k:params[k] for k in keys_fedstd if set(keys_fedstd).issubset(params)}
+            mean_std_processed.append(mean_std_subdict)
+            for key in keys_fedstd:
+                params.pop(key, None)
+                global_model.pop(key, None)
+                self.global_state.pop(key, None)
+        global_mean_std = federated_standardization(mean_std_processed, weights)
+
         # Compute the node-wise model update: (x^t - y_i^t).
         model_updates = {
             node_id: {
@@ -191,6 +204,7 @@ class Scaffold(Aggregator):
         for key, val in global_model.items():
             upd = sum(model_updates[node_id][key] for node_id in model_params)
             global_new[key] = val - upd * (self.server_lr / len(model_params))
+        global_new.update(global_mean_std)
         return global_new
 
     def init_correction_states(
@@ -343,9 +357,11 @@ class Scaffold(Aggregator):
                 "Federated Dataset not provided, but needed for Scaffold. Please use setter `set_fds()`."
             )
         if hasattr(training_plan, "_optimizer") and training_plan.type() is TrainingPlans.TorchTrainingPlan:
-            if not isinstance(training_plan._optimizer.optimizer, torch.optim.SGD):
-                logger.warning(f"Found optimizer {training_plan._optimizer.optimizer}, but SCAFFOLD requieres SGD optimizer. Results may be inconsistants")
-
+            if not isinstance(training_plan._optimizer, torch.optim.SGD):
+                logger.warning(
+                    f"Found optimizer {training_plan._optimizer}, but SCAFFOLD requieres SGD optimizer."
+                    "Results may be inconsistants"
+                )
         return True
 
     def set_nodes_learning_rate_after_training(
@@ -382,8 +398,7 @@ class Scaffold(Aggregator):
 
             else:
                 # ...otherwise retrieve default learning rate
-                optim =  training_plan.optimizer()
-                lrs += optim.get_learning_rate()
+                lrs += training_plan.get_learning_rate()
 
             if len(lrs) == 1:
                 # case where there is one learning rate

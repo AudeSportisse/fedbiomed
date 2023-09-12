@@ -243,12 +243,8 @@ case $1 in
                 docker_compose
 
                 CONTAINER_UID=$(id -u) CONTAINER_GID=$(id -g) \
-                             CONTAINER_USER=$(id -un | sed 's/[^[:alnum:]]/_/g') \
-                             CONTAINER_GROUP=$(id -gn | sed 's/[^[:alnum:]]/_/g') \
                              $DOCKER_COMPOSE build restful mqtt
                 CONTAINER_UID=$(id -u) CONTAINER_GID=$(id -g) \
-                             CONTAINER_USER=$(id -un | sed 's/[^[:alnum:]]/_/g') \
-                             CONTAINER_GROUP=$(id -gn | sed 's/[^[:alnum:]]/_/g') \
                              $DOCKER_COMPOSE up -d restful mqtt
                 ;;
         esac
